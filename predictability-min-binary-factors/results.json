@@ -1,0 +1,47 @@
+{
+  "config": {
+    "D": 8,
+    "K": 4,
+    "henc": 32,
+    "hdec": 32,
+    "hpred": 16,
+    "steps": 1000,
+    "batch": 128,
+    "lr_pred": 0.01,
+    "lr_ed": 0.005,
+    "pred_steps": 3,
+    "lam": 1.0,
+    "lam_warmup": 400,
+    "noise": 0.05,
+    "seed": 7,
+    "log_every": 1000,
+    "eval_n": 2048,
+    "quiet": true
+  },
+  "final": {
+    "L_recon": 0.0028503181600908205,
+    "L_pred": 0.2490481845212,
+    "pairwise_mi": 0.0001008794190326532,
+    "bit_acc": 1.0,
+    "best_perm": [
+      1,
+      0,
+      3,
+      2
+    ],
+    "signs": [
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  "wallclock_s": 1.0475518703460693,
+  "env": {
+    "python": "3.12.9",
+    "numpy": "2.2.5",
+    "platform": "macOS-26.3-arm64-arm-64bit",
+    "processor": "arm",
+    "git": "d9d20f5"
+  }
+}
