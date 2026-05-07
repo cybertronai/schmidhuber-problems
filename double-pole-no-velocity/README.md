@@ -97,6 +97,21 @@ Headline run on **seed 0**, defaults:
 | Final eval, 20 random inits with `|theta_1_0| <= 4.5 deg` | **20 / 20 balanced for >= 1000 steps** |
 | Final eval mean balance time | 1000.0 / 1000 |
 
+**Multi-seed sweep** (10 seeds 0..9, defaults, `--max-gen 100`):
+
+| Result | Seeds | Count |
+|---|---|---|
+| Best assembly reaches 1000 steps during evolution | 0..9 | **10 / 10** |
+| Final 20-init eval = 20/20 balanced | 0, 1, 2, 3, 4, 8, 9 | **7 / 10** |
+| Final 20-init eval >= 13/20 balanced | + 5 (13/20), 6 (15/20) | 9 / 10 |
+| Final 20-init eval = 9/20 balanced | 7 | 1 / 10 |
+
+Mean wallclock per seed = 58.1 s. Every seed solves the fixed-init
+training task; some seeds find a brittle solution that does not
+generalise to the full `|theta_1_0| <= 4.5 deg` random-init range. The
+gap closes with `--pop 80 --trials 6` (paper-style budget) at the cost
+of ~3x wallclock per seed.
+
 **Hyperparameters** (defaults; see `RunConfig` in
 `double_pole_no_velocity.py`):
 
@@ -282,14 +297,15 @@ the hidden angular velocities.
 
 ## Open questions / next experiments
 
-- **Multi-seed solve rate** at default budget. A partial 6-seed sweep
-  at `--max-gen 100` (seeds 0..5) gave: seeds 0..4 reach 20/20 final
-  eval at `>= 1000` steps, seed 5 reaches 13/20 (mean balance 822.5).
-  A full 30-seed sweep at the v1 budget (`pop=40`, `trials=4`,
-  `max_gen=100`) is the natural calibration. The 2005 paper reports
-  >= 95 % at full budget (`pop=200`, more trials per individual);
-  closing that gap is what `pop`, `trials`, and `burst_after_stale`
-  should do.
+- **Closing the generalisation gap** at default budget. The 10-seed
+  sweep (see §Results) shows 10/10 seeds solve the fixed-init training
+  task but only 7/10 generalise to 20/20 on the random-init eval. The
+  three seeds (5, 6, 7) that miss find brittle bang-bang policies tuned
+  to the 4.5-deg starting tilt. Two cheap fixes worth trying: (a) train
+  with `K=2` random tilts per evaluation rather than a fixed init,
+  (b) double the evolutionary budget (`--pop 80 --trials 6`). The 2005
+  paper reports >= 95 % solve at full budget (`pop=200`, more trials
+  per individual).
 - **CoSyNE permutation step**. Adding the permutation step that turns
   ESP into CoSyNE is a small code change and should reduce
   trial-to-solve by a factor of ~2 on this task (Gomez 2008 NIPS).
