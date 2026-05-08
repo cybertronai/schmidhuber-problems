@@ -6,3 +6,8 @@ __pycache__/
 .env
 *.egg-info/
 .ipynb_checkpoints/
+
+# mdBook build artifacts (regenerated from stub folders by bin/build_book.py)
+src/
+book/
+
