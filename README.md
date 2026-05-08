@@ -2,6 +2,7 @@
 
 A reproducible-baseline catalog of the synthetic learning problems that appear in Jürgen Schmidhuber's experimental papers from 1989 through 2025 — implemented in pure numpy, runnable on a laptop CPU, with paper-comparison metrics per stub.
 
+- **GitHub**: https://github.com/cybertronai/schmidhuber-problems
 - **Site**: https://cybertronai.github.io/schmidhuber-problems/
 - **Catalog**: [RESULTS.md](RESULTS.md)
 - **Visual tour**: [VISUAL_TOUR.md](VISUAL_TOUR.md)
