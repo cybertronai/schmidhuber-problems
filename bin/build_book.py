@@ -132,11 +132,27 @@ def main() -> None:
         shutil.rmtree(SRC)
     SRC.mkdir()
 
-    # Top-level pages
+    # Top-level pages. Source uses uppercase filenames (so links work on
+    # GitHub's repo view); mdBook generates lowercase-hyphenated HTML, so
+    # rewrite the inter-page references after copy.
     shutil.copy(ROOT / "README.md", SRC / "index.md")
     shutil.copy(ROOT / "RESULTS.md", SRC / "results.md")
     shutil.copy(ROOT / "VISUAL_TOUR.md", SRC / "visual-tour.md")
     shutil.copy(ROOT / "BUILD_NOTES.md", SRC / "build-notes.md")
+
+    LINK_REWRITES = [
+        ("RESULTS.md", "results.md"),
+        ("VISUAL_TOUR.md", "visual-tour.md"),
+        ("BUILD_NOTES.md", "build-notes.md"),
+        ("README.md", "index.md"),
+    ]
+    for top in ("index.md", "results.md", "visual-tour.md", "build-notes.md"):
+        path = SRC / top
+        text = path.read_text()
+        for old, new in LINK_REWRITES:
+            text = text.replace(f"({old})", f"({new})")
+            text = text.replace(f"][{old}]", f"][{new}]")
+        path.write_text(text)
 
     # Per-stub folders
     all_stubs: list[str] = []
