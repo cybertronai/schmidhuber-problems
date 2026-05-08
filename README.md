@@ -2,7 +2,7 @@
 
 A reproducible-baseline catalog of the synthetic learning problems that appear in Jürgen Schmidhuber's experimental papers from 1989 through 2025 — implemented in pure numpy, runnable on a laptop CPU, with paper-comparison metrics per stub.
 
-**Site**: https://cybertronai.github.io/schmidhuber-problems/ • **Catalog**: [RESULTS.md](RESULTS.md) • **Visual tour**: [VISUAL_TOUR.md](VISUAL_TOUR.md) • **58 of 58 stubs implemented** (12 wave PRs)
+**Site**: https://cybertronai.github.io/schmidhuber-problems/ • **Catalog**: [RESULTS.md](RESULTS.md) • **Visual tour**: [VISUAL_TOUR.md](VISUAL_TOUR.md) • **Build notes**: [BUILD_NOTES.md](BUILD_NOTES.md) • **58 of 58 stubs implemented** (PRs #4–#16, all merged 2026-05-08)
 
 ## Introduction
 
@@ -18,9 +18,31 @@ v1 + v1.5 ship 58 implementations covering this lineage from the 1989 NBB throug
 
 ## What's here
 
+| 32 reproduce paper claims | 25 partial / qualitative reproductions | 1 honest non-replication |
+| :---: | :---: | :---: |
+| full or qualitative match | algorithm works, paper-config gap documented | gap analysed mathematically |
+
 Pure numpy + matplotlib throughout. Every stub runs on a laptop CPU. Each problem lives in its own folder with `<slug>.py` (model + train + eval), `README.md` (8 sections: Header / Problem / Files / Running / Results / Visualizations / Deviations / Open questions), `make_<slug>_gif.py`, `visualize_<slug>.py`, an animated `<slug>.gif`, and a `viz/` folder of training curves and weight visualizations.
 
 Per the SPEC's RL-stub rule, RL/env-heavy stubs (`pole-balance-*`, `pomdp-flag-maze`, `world-models-*`, `torcs-vision-evolution`, `upside-down-rl`, `double-pole-no-velocity`) use **numpy mini-environments** that capture the algorithmic claim of the original paper, not the original simulator. The substitution is documented in each stub's §Deviations. Original-simulator reruns are tracked as v2 follow-ups.
+
+## Development
+
+This repository includes a minimal Nix development shell with Python and NumPy:
+
+```bash
+nix develop
+python3 nbb-xor/nbb_xor.py --seed 0
+```
+
+Or run one stub directly without Nix (assumes `python3 -m pip install numpy matplotlib`):
+
+```bash
+cd flip-flop
+python3 flip_flop.py --seed 0
+python3 visualize_flip_flop.py
+python3 make_flip_flop_gif.py
+```
 
 ## Visual tour
 
