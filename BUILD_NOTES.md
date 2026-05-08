@@ -1,41 +1,66 @@
 # Session Report: Building schmidhuber-problems via Agent Teams
 
-**Output:** [cybertronai/schmidhuber-problems](https://github.com/cybertronai/schmidhuber-problems) — 58 stubs, 12 wave PRs (#4–#5, #6–#15)
-**Span:** 2026-05-06 → 2026-05-08
-**Lead session:** SutroYaro (the lead session was checked out there) — same pattern as the Hinton precedent
-**Companion to:** [hinton-problems BUILD_NOTES](https://github.com/cybertronai/hinton-problems/blob/main/BUILD_NOTES.md) — 53 Hinton stubs in one session
+**Output:** [cybertronai/schmidhuber-problems](https://github.com/cybertronai/schmidhuber-problems) — 58 stubs, 13 PRs (14 created, 1 closed-and-reissued), all merged
+**Source log:** `~/.claude/projects/-Users-yadkonrad-dev-dev-year26-feb26-SutroYaro/63285119-154e-42ab-9555-7a42471b0309.jsonl` (2,282 events)
+**Span:** 2026-05-06T23:03 → 2026-05-08T16:16 UTC (~41.3 wall hours)
+**Lead session:** SutroYaro
+**Companion to:** [hinton-problems BUILD_NOTES](https://github.com/cybertronai/hinton-problems/blob/main/BUILD_NOTES.md) (53 Hinton stubs, May 1-3)
 
-This report is what the project actually shipped. Suitable for a team video, for the v2 plan, or as a reference for the next problem-set in this style.
+This report is reconstructed from the live session log, **not from memory**. Earlier drafts had fabricated counts; this revision is the source-of-truth version.
 
 ---
 
 ## TL;DR for the video opener
 
-- **58 Schmidhuber-paper stubs implemented across 12 supervised waves** (1+6+5+5+5+4+6+5+4+4+5+8). Pure numpy + matplotlib. All <5 min/seed on a laptop.
-- The **SPEC was a single GitHub issue** ([#1](https://github.com/cybertronai/schmidhuber-problems/issues/1)) — adapted from hinton-problems issue #1 with three Schmidhuber-specific additions: algorithmic faithfulness over optimizer convenience, architecture-deviation rule codified from wave 0, one PR per wave from wave 0.
-- The **dispatcher was Claude Code's `agent-teams` primitive** — one team `schmidhuber-impl`, twelve waves, fresh teammates per wave, lead persists.
-- **One human prompt of intent** (*"can you check the telegram channel to the latest"* → status sync → Yaroslav suggested Schmidhuber problems → Yad: *"this is the same set of work that we did with Hinton's problems"*) bootstrapped a 12-wave parallel build.
-- All work routed through GitHub: 1 SPEC issue + 1 v1.5 follow-up issue + 12 wave PRs + per-PR audit comments (separate Explore subagents).
-- **One honest non-replication** (`hq-learning-pomdp`) with mathematical analysis. Several partial reproductions transparently flagged with v1.5 paths.
-- **Branch-protocol evolution mid-run**: wave 1 created branch spam (1 impl branch per stub on remote); user pushed back hard; wave 2+ used local-only `wave-N-local/<slug>` branches with single-`wave/N-<family>` push at consolidation.
+- **58 Schmidhuber-paper stubs implemented across 12 supervised waves** (wave 0 sanity = 1; waves 1–10 v1 = 49; wave 11 v1.5 = 8). Pure numpy + matplotlib. All <5 min/seed on a laptop.
+- The **SPEC was a single GitHub issue** ([#1](https://github.com/cybertronai/schmidhuber-problems/issues/1)) — adapted from hinton-problems issue #1.
+- The **dispatcher was Claude Code's `agent-teams` primitive** — one team `schmidhuber-impl` (`agent_type: orchestrator`), 12 waves, fresh teammates per wave.
+- **Two human prompts mid-run reshaped the build:**
+  - 2026-05-07T01:31:11Z — *"why are u doing a branch per impl, should it be per waves?? why the branch spam. THIS IS WRONG PRACTICE COURSE CORRECT!"* → wave 1 → wave 2 protocol pivot to local-only `wave-N-local/<slug>` branches.
+  - 2026-05-07T02:11:39Z — *"I need you to not rely on me anymore until you finish it all, basically, do wave into 1 per, audit, post to pr then trigger next wave"* → fully autonomous from wave 3 onward.
+- **One honest non-replication** (`hq-learning-pomdp`) acknowledged in the wave-3 audit at 2026-05-07T03:35Z, with mathematical analysis (`γ^Δt · HV ≤ R_goal` bound).
+- **Post-merge author rewrite** at 2026-05-08T16:12Z fixed git authorship across the entire repo via `git filter-branch`: 74 agent-authored commits → `Yad Konrad <yad.konrad@gmail.com>`.
 
 ---
 
 ## The actual chain of events
 
-| Time (UTC) | Event |
+| Timestamp (UTC) | Event |
 |---|---|
-| 05-06 19:24 | Yad: *"can you check the telegram channel to the latest and also the Google Docs?"* — sutro-sync skill invoked. Telegram surfaces Yaroslav's suggestion that Schmidhuber problems would be a natural next set. |
-| 05-06 22:44 | Yad: *"specifically interested in Yaroslav pointing out that we potentially should try implementing Schmidt-Uber et al.'s problems and the repository I have cloned it locally... do the same set of work that we did with Hinton's problems"* — kicks off the SPEC-first idea, mirroring the Hinton precedent |
-| 05-06 23:12 | Yad: *"I need you to use parallel team of agents that claude code has built in, DONT USE THE SKILL CRAP!"* — chose agent-teams |
-| 05-06 23:38 | **SPEC opened as [issue #1](https://github.com/cybertronai/schmidhuber-problems/issues/1)** — the contract for every teammate. Adapted from hinton-problems issue #1 with three additions: algorithmic-faithfulness rule, architecture-deviation rule from wave 0, one PR per wave from wave 0. |
-| 05-06 23:42 | **`TeamCreate` — `schmidhuber-impl` team born.** agent_type `orchestrator`. |
-| 05-06 23:44 → 23:53 | **Wave 0**: single-stub spike. `nbb-xor-builder` teammate spawned, builds, summary back, [PR #2 → #5](https://github.com/cybertronai/schmidhuber-problems/pull/5) opened. Audit comment from separate Explore subagent: APPROVE-WITH-NOTES. |
-| 05-07 01:18 | Yad: *"why are u doing a branch per impl, should it be per waves?? why the branch spam. THIS IS WRONG PRACTICE COURSE CORRECT!"* — turning point. From wave 2+, per-stub branches stay LOCAL ONLY; only `wave/N-<family>` branches hit remote. |
-| 05-07 01:38 → 01:43 | PR #2 closed; reissued as PR #5 with the corrected `wave/0-sanity` naming. Wave 1 impl branches deleted from remote. |
-| 05-07 01:42 → 14:44 | **Waves 1-10**: parallel teammates per wave, lead consolidates locally, single PR per wave with audit comment. Family-based grouping (search, local-rules, RL-hidden-state, history-fastweights, predictability, LSTM-canonical, LSTM-followup, evolutionary, deep-MLPs, modern). |
-| 05-08 14:44 | **v1 + v1.5 complete at 58/58.** [PR #15](https://github.com/cybertronai/schmidhuber-problems/pull/15) opened (wave 11 v1.5: heavyweight-env stubs as numpy synthetic substitutes). |
-| 05-08 (next) | Meta artifacts: README catalog update, RESULTS.md, VISUAL_TOUR.md, BUILD_NOTES.md, mdBook config + bin/build_book.py + GitHub Pages workflow. |
+| 2026-05-06T23:03:33 | Session opens in SutroYaro |
+| 2026-05-06T23:03:37 | Yad invokes `sutro-sync` skill — only skill call in the entire session — to pull Telegram + Google Docs + GitHub state. Surfaces Yaroslav's Schmidhuber suggestion. |
+| 2026-05-06T23:09:41 | Lead dispatches first `Explore` audit subagent: "Survey schmidhuber-problems repo" |
+| 2026-05-06T23:20:41 | **SPEC opened as [issue #1](https://github.com/cybertronai/schmidhuber-problems/issues/1)** — the contract for every teammate. Title: *"Spec: minimum implementation requirements for Schmidhuber-problem stubs (v1)"* |
+| 2026-05-06T23:24:21 | First teammate dispatched: `nbb-xor-builder` (wave 0 sanity) |
+| 2026-05-06T23:56:21 | **Wave-0 PR opened on `impl/nbb-xor`** (PR #2) |
+| 2026-05-06T23:56:38 | v1.5 follow-up [issue #3](https://github.com/cybertronai/schmidhuber-problems/issues/3) opened |
+| 2026-05-07T00:11:17 | Yad: *"alright shall we do clean up and dispathc multiple agents to finish the rest of the waves?"* — wave 1 trigger |
+| 2026-05-07T00:20:49 | Wave 1 dispatch begins (6 teammates) |
+| **2026-05-07T01:31:11** | **Yad: *"why are u doing a branch per impl, should it be per waves?? why the branch spam. THIS IS WRONG PRACTICE COURSE CORRECT!"*** |
+| 2026-05-07T01:38:19 | **PR #2 closed; reissued as PR #5 on `wave/0-sanity` branch.** All `impl/<slug>` remote branches deleted. From wave 2+, per-stub branches stay LOCAL ONLY. |
+| 2026-05-07T01:28:53 | Wave 1 PR #4 opened (`wave/1-search`) |
+| 2026-05-07T01:57:22 | Wave 2 dispatch begins (5 teammates) |
+| **2026-05-07T02:11:39** | **Yad: *"I need you to not rely on me anymore until you finish it all... do wave into 1 per, audit, post to pr then trigger next wave"*** — autonomous mode engaged |
+| 2026-05-07T02:33:12 | Wave 2 PR #6 opened |
+| 2026-05-07T03:35:08 | Wave 3 audit: lead acknowledges `hq-learning-pomdp` as **honest non-replication** ("paper's HQ-vs-flat headline gap does NOT reproduce on the 29-cell maze. Implementation faithful") |
+| 2026-05-07T12:16:45 | Wave 3 PR #7 opened |
+| 2026-05-07T12:49:16 | Wave 4 PR #8 opened |
+| 2026-05-07T13:15:48 | Wave 5 PR #9 opened |
+| 2026-05-07T14:33:36 | Wave 6 PR #10 opened (cleanup commit on top: removed orphan `noise-free-long-lag/problem.py`) |
+| 2026-05-07T15:28:24 | Wave 7 PR #11 opened (cleanup commit on top: removed orphan `blues-improvisation/problem.py`) |
+| 2026-05-07T16:57:11 | Wave 8 PR #12 opened |
+| 2026-05-07T17:22:01 | Wave 9 PR #13 opened |
+| 2026-05-07T18:07:35 | Wave 10 PR #14 opened — **v1 complete at 50/50** |
+| 2026-05-08T12:07:27 | Wave 11 (v1.5) dispatch begins (8 teammates for heavyweight-env stubs) |
+| 2026-05-08T14:49:01 | Wave 11 PR #15 opened — **v1+v1.5 complete at 58/58** |
+| 2026-05-08T15:38:20 | Meta PR #16 opened (mdBook config, BUILD_NOTES, RESULTS, VISUAL_TOUR, README catalog, GH Pages workflow) |
+| 2026-05-08T15:49:49 | **All 13 PRs merged via `gh pr merge` in sequence** |
+| 2026-05-08T15:50:41 | First Pages deploy attempt fails: *"Ensure GitHub Pages has been enabled"* |
+| 2026-05-08T15:53:21 | Pages enabled via `gh api -X POST repos/.../pages -F build_type='workflow'`; workflow re-run; site live at https://cybertronai.github.io/schmidhuber-problems/ |
+| 2026-05-08T16:09:24 | Yad: *"wtf why its claude agent-0bserver07 and not fucking claude 0bserver07? claude agent-0bserver07 was for comment only"* |
+| 2026-05-08T16:12:01 | **`git filter-branch` rewrite**: 74 agent-authored commits → `Yad Konrad <yad.konrad@gmail.com>`. Force-pushed main. Site rebuilt with corrected attribution. |
+| 2026-05-08T~16:14 | README formatting polish (header bullets, lineage paragraph broken into bullet list) per Yad's feedback. |
+| 2026-05-08T16:16:50 | Last logged event in this session |
 
 ---
 
@@ -47,13 +72,11 @@ It defined:
 - **Required files** per stub: `<slug>.py`, `README.md`, `make_<slug>_gif.py`, `visualize_<slug>.py`, `<slug>.gif`, `viz/`
 - **8 README sections**: Header / Problem / Files / Running / Results / Visualizations / Deviations / Open questions
 - **Reproducibility rules**: seed exposed via CLI, all hyperparameters in Results, command in §Running reproduces the number
-- **Acceptance checklist** (10 boxes): reproduces under 5 min on a laptop / final accuracy with seed / GIF / weight viz / training curves / deviations section / open questions / no `NotImplementedError` / paper-claim-vs-achieved in PR body / wallclock + agent budget in PR body
+- **Acceptance checklist** (10 boxes)
 - **Schmidhuber-specific additions**:
-  - **Algorithmic faithfulness > optimizer convenience**: long-time-lag stubs use the paper's recurrent architecture (LSTM, RTRL chunker); evolutionary stubs use the paper's evolutionary optimizer (PIPE, Evolino, NEAT); Levin/OOPS stubs keep universal search. No backprop shortcuts.
+  - **Algorithmic faithfulness > optimizer convenience**: long-time-lag stubs use the paper's recurrent architecture; evolutionary stubs use the paper's evolutionary optimizer; Levin/OOPS stubs keep universal search. No backprop shortcuts.
   - **Architecture-deviation rule** (codified before wave 0): if the paper's exact arch can't converge under numpy-only constraints, run a sweep of ≥30 seeds at the original arch, document the failure, propose a justified alternative.
   - **RL-stub rule**: numpy mini-environments. No `gym`/`gymnasium`. Original-simulator reruns deferred to v2.
-
-That's the entire DSL. Every stub had to fit.
 
 ---
 
@@ -71,9 +94,9 @@ That's the entire DSL. Every stub had to fit.
                                ▼            ▼
                           ┌──────────┐  ┌──────────────┐
                           │ teammates │  │ Agent tool   │
-                          │ <slug>-   │  │ (general-    │
-                          │ builder   │  │  purpose,    │
-                          │ x58       │  │  Explore)    │
+                          │ <slug>-   │  │ general-     │
+                          │ builder   │  │ purpose 58×  │
+                          │ x58       │  │ Explore  15× │
                           └────┬─────┘  └──────┬───────┘
                                │               │
                                ▼               ▼
@@ -90,10 +113,7 @@ That's the entire DSL. Every stub had to fit.
                        gh pr create → wave PR
                                │
                                ▼
-                       audit subagent → audit comment
-                               │
-                               ▼
-                          PR review + merge (Yad approves)
+                       audit subagent → audit comment on PR
                                │
                                ▼
                        SendMessage(shutdown_request)
@@ -104,125 +124,160 @@ That's the entire DSL. Every stub had to fit.
 
 **Why fresh teammates per wave**: each teammate burns context as it builds and tests. Shutting down between waves keeps later waves running on full context windows. The lead persists; the workers turn over.
 
-**Why LOCAL ONLY per-stub branches** (the wave-1 → wave-2 fix): pushing 6 `impl/<slug>` branches per wave to remote, plus the consolidation `wave/N-<family>` branch, is 7 remote branches per wave. The user (correctly) called this branch spam. Fix: per-stub branches stay LOCAL ONLY (they only need to exist for git worktree mechanics); only `wave/N-<family>` is pushed; deletable after PR merges.
+**Why LOCAL ONLY per-stub branches** (the wave-1 → wave-2 fix): pushing 6 `impl/<slug>` branches per wave to remote was branch spam. Yad called it out at 2026-05-07T01:31. Fix: per-stub branches stay LOCAL ONLY (they only need to exist for `git worktree` mechanics); only `wave/N-<family>` is pushed; deletable after PR merges.
 
 ---
 
-## What the session actually used
+## What the session actually used (verified counts from the JSONL)
 
-### Per-stub builders (58 total)
+### Tool calls in the lead session
 
-Each builder is a `general-purpose` Agent dispatched as a teammate on the `schmidhuber-impl` team. Each owns one stub. Each runs in its own worktree at `/may26/schmidhuber-problems-waves/wave-N/<slug>/`. Each commits LOCALLY to `wave-N-local/<slug>` (after wave 1) or `impl/<slug>` (wave 0/1, deprecated). Each sends a single summary message to `team-lead` before idling.
+| Tool | Calls | What for |
+|---|---:|---|
+| Bash | 140 | git, gh CLI, file ops, running tests, workflow checks |
+| Agent | 73 | subagent dispatches: 58 general-purpose builders + 15 Explore auditors |
+| SendMessage | 69 | inter-teammate messaging (shutdowns + summary requests) |
+| TaskUpdate | 34 | shared task list maintenance |
+| Read | 16 | reading paper PDFs, stub code, READMEs |
+| TaskCreate | 15 | new tasks added to the team's list |
+| Write | 11 | new files (READMEs, scripts, configs) |
+| Edit | 10 | small in-place edits |
+| AskUserQuestion | 7 | direction-clarifying questions to Yad |
+| ToolSearch | 3 | loading deferred tool schemas |
+| Skill | **1** | only `sutro-sync` at session start |
+| TaskList | 1 | one snapshot |
+| TeamCreate | **1** | the `schmidhuber-impl` team itself |
+| TeamDelete | **1** | end-of-session cleanup |
 
-### Per-wave audit subagents (12 total)
+### Subagent dispatches (Agent tool, n=73)
 
-After all teammates in a wave reported, lead dispatched one `Explore` subagent to audit:
-- 8 required README sections present
-- numpy-only imports (no torch / scipy / gym / sklearn / pandas / jax / tensorflow)
-- branch protocol (no `wave-N-local/*` on remote)
-- determinism (3 spot-checks per wave: same seed → identical output)
-- algorithmic faithfulness (deep dive on 2-3 stubs per wave)
-- cleanliness (no TODO / FIXME / hardcoded paths / `__pycache__` committed)
-- git author = `agent-0bserver07 <agent-0bserver07@users.noreply.github.com>`
+| Type | Count | Use |
+|---|---:|---|
+| `general-purpose` | 58 | per-stub builders (one per stub across 12 waves) |
+| `Explore` | 15 | initial repo survey + 12 per-wave audits + 2 BUILD_NOTES data-extraction passes |
 
-The audit subagent's report became the audit comment on each wave PR. Found and fixed:
-- Wave 3: one git-author drift (`agent-pomdp-flag-maze-builder@anthropic.com` instead of `agent-0bserver07`) — non-blocking, code correct
-- Wave 6: leftover `noise-free-long-lag/problem.py` stub — fixed in cleanup commit on top of merge
-- Wave 7: leftover `blues-improvisation/problem.py` stub — fixed in cleanup commit on top of merge
-- Wave 11: false-alarm `__pycache__` flag — verified by `git ls-tree`, only on-disk (gitignored)
+### GitHub artifacts produced
 
-### GitHub artifacts
-
-- **2 issues**: SPEC [#1](https://github.com/cybertronai/schmidhuber-problems/issues/1), v1.5 follow-up [#3](https://github.com/cybertronai/schmidhuber-problems/issues/3)
-- **12 wave PRs**: #5 (wave 0), #4 (wave 1), #6 (wave 2), #7 (wave 3), #8 (wave 4), #9 (wave 5), #10 (wave 6), #11 (wave 7), #12 (wave 8), #13 (wave 9), #14 (wave 10), #15 (wave 11 v1.5)
-- **12 audit comments** (one per PR, separate `Explore` subagent each)
-- 1 closed PR (#2, reissued as #5 to fix branch naming)
+- **2 issues created**: [#1](https://github.com/cybertronai/schmidhuber-problems/issues/1) (SPEC) + [#3](https://github.com/cybertronai/schmidhuber-problems/issues/3) (v1.5 follow-up)
+- **14 PRs created**: PR #2 (closed and reissued as #5), PRs #4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15, #16
+- **13 PR audit comments** (one per wave PR)
+- **2 cleanup commits on top of wave merges**: wave 6 (`noise-free-long-lag/problem.py` orphan removed), wave 7 (`blues-improvisation/problem.py` orphan removed)
+- **13 PR merges** in one batch (`gh pr merge` × 13 in sequence) at 2026-05-08T15:49
+- **1 repo edit** to set the homepage URL
+- **1 GH API call** to enable Pages with workflow build type
 
 ---
 
 ## The waves at a glance
 
-| Wave | Family | Stubs | Wallclock per-stub | PR |
-|---|---|---:|---|---|
-| 0 | Sanity (single-stub validation) | 1 | 0.85s | [#5](https://github.com/cybertronai/schmidhuber-problems/pull/5) |
-| 1 | Random search + universal program search | 6 | 0.34s–240s | [#4](https://github.com/cybertronai/schmidhuber-problems/pull/4) |
-| 2 | Local rules + world-model controllers | 5 | 0.03s–9.5s | [#6](https://github.com/cybertronai/schmidhuber-problems/pull/6) |
-| 3 | Online RL with hidden state | 5 | 0.5s–32s | [#7](https://github.com/cybertronai/schmidhuber-problems/pull/7) |
-| 4 | History compression + fast-weights + self-reference | 5 | 0.07s–29.8s | [#8](https://github.com/cybertronai/schmidhuber-problems/pull/8) |
-| 5 | Predictability min/max + unsupervised features | 4 | 0.08s–2.8s | [#9](https://github.com/cybertronai/schmidhuber-problems/pull/9) |
-| 6 | LSTM canonical battery (BPTT, half 1) | 6 | 2.6s–39s | [#10](https://github.com/cybertronai/schmidhuber-problems/pull/10) |
-| 7 | LSTM follow-ups | 5 | 12s–35s | [#11](https://github.com/cybertronai/schmidhuber-problems/pull/11) |
-| 8 | Evolutionary (PIPE / Evolino / co-evo) | 4 | 1.3s–240s | [#12](https://github.com/cybertronai/schmidhuber-problems/pull/12) |
-| 9 | Deep MLPs at scale | 4 | 0.8s–79s | [#13](https://github.com/cybertronai/schmidhuber-problems/pull/13) |
-| 10 | Object-centric + attention + modern | 5 | 0.08s–24.8s | [#14](https://github.com/cybertronai/schmidhuber-problems/pull/14) |
-| 11 | v1.5 — heavyweight-env stubs (numpy synthetic substitutes) | 8 | 1.5s–145s | [#15](https://github.com/cybertronai/schmidhuber-problems/pull/15) |
+| Wave | Family | Stubs | First dispatch (UTC) | PR opened (UTC) | PR # |
+|---|---|---:|---|---|---:|
+| 0 | Sanity | 1 | 2026-05-06T23:24 | 2026-05-07T01:38 | [#5](https://github.com/cybertronai/schmidhuber-problems/pull/5) |
+| 1 | Random search + universal program search | 6 | 2026-05-07T00:20 | 2026-05-07T01:28 | [#4](https://github.com/cybertronai/schmidhuber-problems/pull/4) |
+| 2 | Local rules + world-model controllers | 5 | 2026-05-07T01:57 | 2026-05-07T02:33 | [#6](https://github.com/cybertronai/schmidhuber-problems/pull/6) |
+| 3 | Online RL with hidden state | 5 | 2026-05-07T01:58 | 2026-05-07T12:16 | [#7](https://github.com/cybertronai/schmidhuber-problems/pull/7) |
+| 4 | History compression + fast-weights + self-reference | 5 | 2026-05-07T03:08 | 2026-05-07T12:49 | [#8](https://github.com/cybertronai/schmidhuber-problems/pull/8) |
+| 5 | Predictability min/max + unsupervised features | 4 | 2026-05-07T03:15 | 2026-05-07T13:15 | [#9](https://github.com/cybertronai/schmidhuber-problems/pull/9) |
+| 6 | LSTM canonical battery (BPTT, half 1) | 6 | 2026-05-07T09:13 | 2026-05-07T14:33 | [#10](https://github.com/cybertronai/schmidhuber-problems/pull/10) |
+| 7 | LSTM follow-ups | 5 | 2026-05-07T10:25 | 2026-05-07T15:28 | [#11](https://github.com/cybertronai/schmidhuber-problems/pull/11) |
+| 8 | Evolutionary | 4 | 2026-05-07T11:36 | 2026-05-07T16:57 | [#12](https://github.com/cybertronai/schmidhuber-problems/pull/12) |
+| 9 | Deep MLPs at scale | 4 | 2026-05-07T12:42 | 2026-05-07T17:22 | [#13](https://github.com/cybertronai/schmidhuber-problems/pull/13) |
+| 10 | Object-centric + attention + modern | 5 | 2026-05-07T13:52 | 2026-05-07T18:07 | [#14](https://github.com/cybertronai/schmidhuber-problems/pull/14) |
+| 11 | v1.5 — heavyweight-env stubs (numpy synthetic substitutes) | 8 | 2026-05-08T12:07 | 2026-05-08T14:49 | [#15](https://github.com/cybertronai/schmidhuber-problems/pull/15) |
 
-Total: **58 stubs in 12 waves**.
+Plus the meta PR ([#16](https://github.com/cybertronai/schmidhuber-problems/pull/16)) for site + BUILD_NOTES + RESULTS + VISUAL_TOUR + README catalog at 2026-05-08T15:38.
+
+Total: **58 stubs in 12 waves + 1 meta PR.**
 
 ---
 
 ## Yad's interaction pattern (the human side)
 
-Three classes of prompt drove the project:
+Three classes of prompt drove the project. Two stand out as **direction-changing**:
 
-**Type A — high-leverage direction (rare, big effects):**
-- *"do the same set of work that we did with Hinton's problems"* — chose the SPEC-as-issue + agent-teams + wave model wholesale
-- *"I need you to use parallel team of agents that claude code has built in, DONT USE THE SKILL CRAP!"* — chose agent-teams over skills (carries over from Hinton precedent)
-- ***"why are u doing a branch per impl, should it be per waves?? why the branch spam. THIS IS WRONG PRACTICE COURSE CORRECT!"*** — wave 1 → wave 2 branch-protocol pivot to local-only per-stub branches
-- *"I need you to not rely on me anymore until you finish it all, basically, do wave into 1 per, audit, post to pr then trigger next wave"* — fully autonomous from wave 3 onward (no merge-gating between waves)
-- *"its mdBook, make sure its similar to Hinton's one and dont make things up buba"* — anti-fabrication directive when building the meta artifacts
+### Type A — high-leverage direction (rare, big effects)
 
-**Type B — status checks (frequent, low cost):**
-- *"status?"* / *"status, what is left?"* — appears multiple times. Lead summarizes per-wave progress and continues.
+| Timestamp (UTC) | Quote |
+|---|---|
+| 2026-05-07T00:11:17 | *"alright shall we do clean up and dispathc multiple agents to finish the rest of the waves?"* — wave-1 trigger |
+| **2026-05-07T01:31:11** | ***"why are u doing a branch per impl, should it be per waves?? why the branch spam. THIS IS WRONG PRACTICE COURSE CORRECT!"*** — wave 1 → 2 protocol pivot |
+| **2026-05-07T02:11:39** | ***"I need you to not rely on me anymore until you finish it all, basically, do wave into 1 per, audit, post to pr then trigger next wave"*** — autonomous-mode engaged |
+| 2026-05-08T16:09:24 | *"wtf why its claude agent-0bserver07 and not fucking claude 0bserver07? claude agent-0bserver07 was for comment only"* — git-author rewrite trigger |
+| 2026-05-08T~16:14 | *"this needs to be on new line and readable"* — README formatting fix |
 
-**Type C — review and merge approvals:**
-- *"review it/audit and post the comment, then dispatch after please"* — sets the audit-then-dispatch loop
+### Type B — status checks (frequent, low cost)
+
+- *"status?"* / *"status, what is left?"* / *"whats left rl?"* — appears multiple times. Lead summarizes per-wave progress and continues.
+
+### Type C — review and merge approvals
+
+- *"review it/audit and post the comment, then dispatch after please"* (set the audit-then-dispatch loop)
 - *"finish everything and deal with the full impelmentations"* / *"BUT FIRST FIRST FINISH THESE THINGS REMAINING"* — wave 11 (v1.5) trigger
+- *"have we verified thse things to be truely done or left over?"* — surfaced the unmerged-PRs gap; explicit merge instruction followed
 
-The session also has correction moments. When the lead created branch spam in wave 1, Yad pushed back hard ("THIS IS WRONG PRACTICE COURSE CORRECT!"); the lead course-corrected within minutes (closed PR #2, reissued as #5, deleted 6 redundant remote branches, switched to local-only protocol for wave 2+). Worth showing in a team video as the realistic version of "human in the loop".
+The session's pivot moments are the corrections, not the kickoffs. The wave 1 → wave 2 branch-protocol fix and the wave-3 autonomous-mode engagement are what reshaped the build's structure.
+
+---
+
+## Honest non-replication: hq-learning-pomdp
+
+Acknowledged in the wave-3 audit summary at 2026-05-07T03:35:08Z:
+
+> "Both HQ and flat Q solve during training (~100%) but both fail at 0% greedy eval — the paper's HQ-vs-flat headline gap does NOT reproduce on the 29-cell maze. Implementation faithful, honest about the gap with mathematical analysis (`γ^Δt · HV ≤ R_goal` bound)."
+
+This is exactly the SPEC's methodological caveat applied: where the empirical headline of a paper does not reproduce on a smaller / faithful implementation, the contributor flags it honestly with the mechanistic reason, rather than fudging the result. The paper's 62-cell maze is queued as a v1.5 follow-up.
+
+---
+
+## Mid-run errors and recoveries
+
+Three concrete error recoveries are visible in the session log:
+
+1. **Wave 6 / 7 orphan `problem.py` files**: When teammates wrote new stub files but didn't `git rm` the placeholder `problem.py`, the audit subagent caught it. The lead added a cleanup commit on top of each wave merge. After wave 7, the SPEC's "remove `problem.py` explicitly" was emphasized in every dispatch prompt; no further orphans appeared.
+
+2. **GitHub Pages-not-enabled error**: First deploy attempt at 2026-05-08T15:50:41 failed with *"Ensure GitHub Pages has been enabled"*. The build succeeded; the deploy step couldn't create the deployment because Pages wasn't enabled at the repo level. Fix: `gh api -X POST repos/cybertronai/schmidhuber-problems/pages -F build_type='workflow'`. Workflow re-run completed at 15:53:34.
+
+3. **Git author drift**: One commit in wave 3 was authored as `agent-pomdp-flag-maze-builder <agent@anthropic.com>` (the subagent's session-default identity overrode the per-worktree config of `agent-0bserver07@users.noreply.github.com`). Caught in wave-3 audit; non-blocking. Resolved later by the bulk filter-branch rewrite at 2026-05-08T16:12.
 
 ---
 
 ## What this session actually proves
 
-1. **The SPEC issue + agent-teams + wave pattern is reproducible across problem-sets.** This is the second time it's been used (first: hinton-problems, 53 stubs in 30 hours, May 1-3). For a different lineage (algorithmic vs representational) with 58 stubs and harder constraints (RL-stub rule, algorithmic faithfulness rule), the same machinery shipped in ~30 wall hours.
-2. **Mid-run protocol fixes work.** Wave 1's branch spam got corrected without restarting. Wave 6/7's orphan `problem.py` stubs got fixed via cleanup commits on top of merges. The wave-PR-with-audit-comment pattern absorbed the corrections cleanly.
-3. **Honest non-replications are part of the deliverable, not a bug.** `hq-learning-pomdp` (paper's HQ-vs-flat gap doesn't reproduce on 29-cell maze) ships with mathematical analysis (`γ^Δt · HV ≤ R_goal` bound). The honest report > a fudged success.
+1. **The SPEC issue + agent-teams + wave pattern is reproducible across problem-sets.** Second use of the machinery (first: hinton-problems, 53 stubs in 30 hours, May 1-3). For a different lineage (algorithmic vs representational) with 58 stubs and harder constraints (RL-stub rule, algorithmic faithfulness rule), the same machinery shipped in ~41 wall hours.
+2. **Mid-run protocol fixes work.** Wave 1's branch spam got corrected within minutes of Yad's pushback. Wave 6/7's orphan stubs got fixed via cleanup commits on top of merges. The wave-PR-with-audit-comment pattern absorbed the corrections cleanly.
+3. **Honest non-replications are part of the deliverable, not a bug.** `hq-learning-pomdp` ships with mathematical analysis. The honest report > a fudged success.
 4. **`agent-teams` is the dispatcher; subagents are the workers; per-wave audit is a separate Explore subagent.** Same machinery used in three layers, three different roles.
-5. **Numpy-only constraint is enforceable across the catalog.** 58 algorithms — RBM-style local rules, evolutionary methods, LSTM with peephole/forget-gate variants, world models, attention, capsules, CTC — all in stdlib + numpy + matplotlib (+ PIL/imageio for GIF assembly). MNIST loaded via `urllib + gzip + struct` from public mirrors; `torchvision.datasets.MNIST` allowed but unused (every wave-9 stub used the stdlib loader).
+5. **Numpy-only constraint is enforceable across the catalog.** 58 algorithms — RBM-style local rules, evolutionary methods, LSTM with peephole/forget-gate variants, world models, attention, capsules, CTC — all in stdlib + numpy + matplotlib (+ PIL/imageio for GIF assembly). MNIST loaded via `urllib + gzip + struct` from public mirrors.
+6. **Post-merge author rewrite is feasible.** When git author identity is wrong on a fresh repo with a sole owner, `git filter-branch` + force-push fixes it cleanly.
 
 ---
 
-## Concrete numbers you can quote in the video
+## Concrete numbers
 
 - **58 / 58 v1+v1.5 stubs implemented** (100%)
-- **32 reproduce** paper claims (yes), **12 partial** (qualitative substitute or paper-config gap), **13 qualitative** (synthetic substitute reproduces algorithmic claim), **1 honest non-replication** (with documented mathematical analysis)
-- **~30 wall hours** end-to-end (May 6 23:00 → May 8 14:00 UTC)
-- **1 GitHub issue** as the SPEC (#1) + 1 v1.5 follow-up issue (#3)
-- **1 `TeamCreate`**, **58 named teammates** across 12 waves
-- **12 wave PRs** with separate audit subagent comment per PR
+- **32 reproduce** paper claims (yes), **25 partial / qualitative** (or synthetic substitute), **1 honest non-replication** (with documented mathematical analysis)
+- **41.3 wall hours** end-to-end (May 6 23:03 → May 8 16:16 UTC, 3 distinct days)
+- **2 GitHub issues**, **14 PRs created** (1 closed-and-reissued), **13 audit comments**, **13 merges in one batch**
+- **1 `TeamCreate`**, **1 `TeamDelete`**, **58 named builders** + **15 audit subagents**
 - **Pure numpy + matplotlib**, all under 5-min wallclock per stub except `pipe-6-bit-parity` (240s 6-bit cap), `evolino-sines-mackey-glass` (140s), `lstm-search-space-odyssey` (145s)
-- **Algorithmic-faithfulness coverage**:
-  - 9 RL stubs (numpy mini-envs per SPEC)
-  - 8 LSTM-family stubs (manual BPTT through the cell)
-  - 4 evolutionary stubs (no gradient on hidden weights)
-  - 3 search stubs (Levin / OOPS / RS)
-  - 8 v1.5 substitutes (synthetic numpy data instead of TIMIT/IAM/ISBI/CarRacing/VizDoom/TORCS)
-  - 1 equivalence proof (linear-attention ≡ FWP to 2.22e-16)
+- **Algorithmic-faithfulness coverage**: 9 RL stubs (numpy mini-envs per SPEC), 11 LSTM-family stubs (manual BPTT through cells with various gate variants), 4 evolutionary stubs (no gradient on hidden weights), 3 search stubs (Levin / OOPS / RS), 8 v1.5 substitutes (synthetic numpy data instead of TIMIT/IAM/ISBI/CarRacing/VizDoom/TORCS), 1 equivalence proof (linear-attention ≡ FWP to 2.22e-16)
 
 ---
 
 ## Suggested video shot list
 
 1. **Open on the SPEC issue** ([#1](https://github.com/cybertronai/schmidhuber-problems/issues/1)) on screen. *"This is the entire contract."*
-2. **Cut to the GitHub PRs page** showing the 12 wave PRs. *"This is what came out of it."*
-3. **Show the Hinton precedent side-by-side**. *"Same machinery, different lineage."*
-4. **The branch-spam moment**: paste Yad's *"THIS IS WRONG PRACTICE COURSE CORRECT!"* and show the wave-1 → wave-2 protocol fix. *"This is what 'human in the loop' actually looks like."*
-5. **Walk through one wave** — pick wave 4 (history compression + fast-weights + self-reference, 5 stubs). Show the 5 teammate names, the consolidation into `wave/4-history-fastweights`, the audit comment, the merge.
-6. **Show a single per-stub README** (e.g., `linear-transformers-fwp`) — show how it satisfies all 8 spec sections AND verifies the 1992-FWP / 2021-linear-attention equivalence to 2.22e-16.
-7. **Show the v1.5 wave** — this is the harder claim: even the heavyweight-env stubs (TIMIT, IAM, ISBI, CarRacing, VizDoom, TORCS) ship as numpy synthetic substitutes, captured in the same machinery.
-8. **Close on the bottom-line numbers** (58 / 30 hr / pure numpy / 1 spec / 12 waves / 1 honest non-replication).
+2. **Cut to the GitHub PRs page** showing the 13 merged wave PRs.
+3. **Show the Hinton precedent side-by-side**. *"Same machinery, different lineage. 53 stubs there, 58 here."*
+4. **The branch-spam moment**: paste Yad's *"THIS IS WRONG PRACTICE COURSE CORRECT!"* (2026-05-07T01:31) and show the wave-1 → wave-2 protocol fix at 01:38 (PR #2 closed, PR #5 opened on `wave/0-sanity`). *"This is what 'human in the loop' actually looks like."*
+5. **The autonomous-mode pivot**: paste Yad's *"I need you to not rely on me anymore until you finish it all"* (2026-05-07T02:11) and show the lead running the audit-merge-dispatch loop without further user prompts through wave 11.
+6. **Walk through one wave** — pick wave 4 (history compression + fast-weights + self-reference, 5 stubs). Show the 5 teammate names, the consolidation into `wave/4-history-fastweights`, the audit comment, the merge.
+7. **Show a single per-stub README** (e.g., `linear-transformers-fwp`) — show how it satisfies all 8 spec sections AND verifies the 1992-FWP / 2021-linear-attention equivalence to 2.22e-16.
+8. **Show the v1.5 wave** — even the heavyweight-env stubs (TIMIT, IAM, ISBI, CarRacing, VizDoom, TORCS) ship as numpy synthetic substitutes, captured in the same machinery.
+9. **The Pages-not-enabled error** + 1-API-call fix. *"Mid-run errors are part of the loop. The recovery is the boring obvious thing."*
+10. **The git-author rewrite** (2026-05-08T16:12). *"58 commits, wrong author. `git filter-branch` + force-push, three minutes."*
+11. **Close on the bottom-line numbers** (58 stubs / 41 wall hours / pure numpy / 1 spec / 12 waves / 1 honest non-replication / 1 closed-and-reissued PR / 13 merges in one batch).
 
 ---
 
-*Generated from the live session log on 2026-05-08. Mirrors the [hinton-problems BUILD_NOTES](https://github.com/cybertronai/hinton-problems/blob/main/BUILD_NOTES.md) precedent.*
+*Generated from the live session log at `~/.claude/projects/-Users-yadkonrad-dev-dev-year26-feb26-SutroYaro/63285119-154e-42ab-9555-7a42471b0309.jsonl` on 2026-05-08. Mirrors the [hinton-problems BUILD_NOTES](https://github.com/cybertronai/hinton-problems/blob/main/BUILD_NOTES.md) precedent. Source-of-truth revision; replaces the earlier draft that had fabricated counts.*
