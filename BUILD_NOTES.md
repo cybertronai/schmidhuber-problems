@@ -158,13 +158,35 @@ It defined:
 
 ### GitHub artifacts produced
 
-- **2 issues created**: [#1](https://github.com/cybertronai/schmidhuber-problems/issues/1) (SPEC) + [#3](https://github.com/cybertronai/schmidhuber-problems/issues/3) (v1.5 follow-up)
+- **5 issues created**: [#1](https://github.com/cybertronai/schmidhuber-problems/issues/1) (SPEC, closed), [#3](https://github.com/cybertronai/schmidhuber-problems/issues/3) (v1.5 nbb-xor follow-up), [#17](https://github.com/cybertronai/schmidhuber-problems/issues/17) (v2 ByteDMD), [#18](https://github.com/cybertronai/schmidhuber-problems/issues/18) (v1.5 paper-scale + original-simulator), [#19](https://github.com/cybertronai/schmidhuber-problems/issues/19) (token-math explainer)
 - **14 PRs created**: PR #2 (closed and reissued as #5), PRs #4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15, #16
 - **13 PR audit comments** (one per wave PR)
 - **2 cleanup commits on top of wave merges**: wave 6 (`noise-free-long-lag/problem.py` orphan removed), wave 7 (`blues-improvisation/problem.py` orphan removed)
 - **13 PR merges** in one batch (`gh pr merge` × 13 in sequence) at 2026-05-08T15:49
 - **1 repo edit** to set the homepage URL
 - **1 GH API call** to enable Pages with workflow build type
+
+### Token consumption — measured from JSONL session logs
+
+The harness display the lead session was showing during the build (something like `674k/1M (67%)`) is **the current context window utilisation, not cumulative tokens consumed**. It answers "how much room is left in the 1M-token window?", not "how much did the build cost?". The honest cost number requires aggregating the JSONL files for the lead + every subagent.
+
+Counted across the 75 JSONL session files in `~/.claude/projects/-Users-yadkonrad-dev-dev-year26-feb26-SutroYaro/` within the build window (2026-05-06T22:00 → 2026-05-08T17:00 UTC):
+
+| Bucket | Tokens | % of total |
+|---|---:|---:|
+| Input (uncached, fresh content sent to the model) | 334,473 | 0.03% |
+| Output (model generations) | 11,000,537 | 0.95% |
+| Cache creation (first-time write of a prefix into the cache) | 87,105,249 | 7.56% |
+| **Cache read** (re-loading already-cached prefix on subsequent turns) | **1,053,229,534** | **91.45%** |
+| **Total tokens touched** | **1,151,669,793** | 100% |
+
+Why cache reads dominate: 822 assistant turns on the lead alone × growing conversation history × Anthropic's prompt caching means each turn re-reads the system prompt + tool definitions + prior turns out of cache (heavy discount) instead of paying full input rate.
+
+74 distinct sessions worth of work participated: lead + 73 subagent dispatches (58 builders + 15 auditors). Claude Code spawns each subagent dispatch in its own session; the lead's JSONL only records the dispatch call and the subagent's final return, not the subagent's internal turns.
+
+**Caveat**: the 75 files include some unrelated parallel work that happened to share the SutroYaro project dir during the calendar window (status checks, Hinton precedent inspection). Schmidhuber-only volume is ~95% of the 1.15B figure. The chimera project Yad worked on in parallel lives in a different `~/.claude/projects/` dir and was filtered out.
+
+The full explainer of how to read these numbers (and how the harness UI display ≠ build cost) is in [issue #19](https://github.com/cybertronai/schmidhuber-problems/issues/19).
 
 ---
 
@@ -257,8 +279,9 @@ Three concrete error recoveries are visible in the session log:
 - **58 / 58 v1+v1.5 stubs implemented** (100%)
 - **32 reproduce** paper claims (yes), **25 partial / qualitative** (or synthetic substitute), **1 honest non-replication** (with documented mathematical analysis)
 - **41.3 wall hours** end-to-end (May 6 23:03 → May 8 16:16 UTC, 3 distinct days)
-- **2 GitHub issues**, **14 PRs created** (1 closed-and-reissued), **13 audit comments**, **13 merges in one batch**
+- **5 GitHub issues**, **14 PRs created** (1 closed-and-reissued), **13 audit comments**, **13 merges in one batch**
 - **1 `TeamCreate`**, **1 `TeamDelete`**, **58 named builders** + **15 audit subagents**
+- **74 distinct sessions** (lead + 73 subagent dispatches) consuming **~1.15 billion tokens total**, of which **91% is cache_read** (re-loaded prefix from prior turns). Harness "780k" display is current context-window utilisation, not cumulative cost. Full breakdown in [issue #19](https://github.com/cybertronai/schmidhuber-problems/issues/19).
 - **Pure numpy + matplotlib**, all under 5-min wallclock per stub except `pipe-6-bit-parity` (240s 6-bit cap), `evolino-sines-mackey-glass` (140s), `lstm-search-space-odyssey` (145s)
 - **Algorithmic-faithfulness coverage**: 9 RL stubs (numpy mini-envs per SPEC), 11 LSTM-family stubs (manual BPTT through cells with various gate variants), 4 evolutionary stubs (no gradient on hidden weights), 3 search stubs (Levin / OOPS / RS), 8 v1.5 substitutes (synthetic numpy data instead of TIMIT/IAM/ISBI/CarRacing/VizDoom/TORCS), 1 equivalence proof (linear-attention ≡ FWP to 2.22e-16)
 

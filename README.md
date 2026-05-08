@@ -8,6 +8,7 @@ A reproducible-baseline catalog of the synthetic learning problems that appear i
 - **Visual tour**: [VISUAL_TOUR.md](VISUAL_TOUR.md)
 - **Build notes**: [BUILD_NOTES.md](BUILD_NOTES.md)
 - **Status**: 58 of 58 stubs implemented (PRs [#4](https://github.com/cybertronai/schmidhuber-problems/pull/4)–[#16](https://github.com/cybertronai/schmidhuber-problems/pull/16), all merged 2026-05-08)
+- **Build cost / token math**: ~1.15B tokens across 74 sessions (lead + 73 subagent dispatches), 91% cache_read. The harness "780k" is context-window utilisation, not cumulative consumption. Breakdown: [BUILD_NOTES.md § Token consumption](BUILD_NOTES.md) + [issue #19](https://github.com/cybertronai/schmidhuber-problems/issues/19).
 
 ## Introduction
 
