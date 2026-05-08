@@ -2,7 +2,11 @@
 
 A reproducible-baseline catalog of the synthetic learning problems that appear in Jürgen Schmidhuber's experimental papers from 1989 through 2025 — implemented in pure numpy, runnable on a laptop CPU, with paper-comparison metrics per stub.
 
-**Site**: https://cybertronai.github.io/schmidhuber-problems/ • **Catalog**: [RESULTS.md](RESULTS.md) • **Visual tour**: [VISUAL_TOUR.md](VISUAL_TOUR.md) • **Build notes**: [BUILD_NOTES.md](BUILD_NOTES.md) • **58 of 58 stubs implemented** (PRs #4–#16, all merged 2026-05-08)
+- **Site**: https://cybertronai.github.io/schmidhuber-problems/
+- **Catalog**: [RESULTS.md](RESULTS.md)
+- **Visual tour**: [VISUAL_TOUR.md](VISUAL_TOUR.md)
+- **Build notes**: [BUILD_NOTES.md](BUILD_NOTES.md)
+- **Status**: 58 of 58 stubs implemented (PRs [#4](https://github.com/cybertronai/schmidhuber-problems/pull/4)–[#16](https://github.com/cybertronai/schmidhuber-problems/pull/16), all merged 2026-05-08)
 
 ## Introduction
 
@@ -12,7 +16,14 @@ A reproducible-baseline catalog of the synthetic learning problems that appear i
 >
 > — Yaroslav, [hinton-problems issue #1](https://github.com/cybertronai/hinton-problems/issues/1#issuecomment-4363088986) (Sutro Group)
 
-This repository **is the algorithmic-lineage companion** to [`hinton-problems`](https://github.com/cybertronai/hinton-problems). Hinton's catalog emphasizes **representational** toy tasks (small benchmarks where hidden-unit inspection is the experimental payoff). Schmidhuber's lineage emphasizes **algorithmic** capability: long-time-lag indexing (1990 flip-flop → 1992 chunker → 1996 adding-problem → 1997 temporal-order), key-value binding (1992 fast-weights → 2021 linear Transformers), Kolmogorov-complexity search (1995 Levin → 2003 OOPS), and controller+model+curiosity loops in tiny stochastic environments (1990 pole-balance → 2018 World Models).
+This repository **is the algorithmic-lineage companion** to [`hinton-problems`](https://github.com/cybertronai/hinton-problems).
+
+- **Hinton's catalog** emphasizes **representational** toy tasks: small benchmarks where hidden-unit inspection is the experimental payoff (4-2-4 encoder, family trees, shifter, Forward-Forward MNIST).
+- **Schmidhuber's lineage** emphasizes **algorithmic** capability. Four threads run through this catalog:
+    - **Long-time-lag indexing**: 1990 flip-flop → 1992 chunker → 1996 adding-problem → 1997 temporal-order
+    - **Key-value binding**: 1992 fast-weights → 2021 linear Transformers (the same outer-product math, 29 years apart)
+    - **Kolmogorov-complexity search**: 1995 Levin search → 2003 OOPS (program enumeration, no gradients)
+    - **Controller + model + curiosity loops in tiny stochastic environments**: 1990 pole-balance → 2018 World Models
 
 v1 + v1.5 ship 58 implementations covering this lineage from the 1989 NBB through the 2022 Neural Data Router. Each stub is a self-contained folder with model + train + eval + visualization + animated GIF, all in numpy, all runnable in <5 min per seed on an M-series laptop.
 
