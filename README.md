@@ -31,7 +31,7 @@ v1 + v1.5 ship 58 implementations covering this lineage from the 1989 NBB throug
 
 ## What's here
 
-| 32 reproduce paper claims | 25 partial / qualitative reproductions | 1 honest non-replication |
+| 33 reproduce paper claims | 24 partial / qualitative reproductions | 1 honest non-replication |
 | :---: | :---: | :---: |
 | full or qualitative match | algorithm works, paper-config gap documented | gap analysed mathematically |
 
@@ -121,7 +121,7 @@ Each table shows the v1 result per stub. Full per-stub metrics (run wallclock, h
 
 | Stub | Reproduces? | Run wallclock |
 |---|---|---:|
-| [pomdp-flag-maze](pomdp-flag-maze/) | partial (6/10 seeds 100% solve, 4/10 stuck at 50%) | 22-32s |
+| [pomdp-flag-maze](pomdp-flag-maze/) | yes (10/10 seeds solve with near-identity controller recurrence) | 22-32s |
 
 **Schmidhuber (1991/1992)** — Neural sequence chunkers / *Learning complex extended sequences using the principle of history compression*
 

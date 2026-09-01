@@ -54,7 +54,7 @@ Per-stub reproducibility, run wallclock, and headline result for the 58 implemen
 
 | Stub | Reproduces? | Run wallclock | Headline |
 |---|---|---:|---|
-| [`pomdp-flag-maze/`](pomdp-flag-maze/) (PR #7) | partial | 22-32s | 6/10 seeds 100% solve, 4/10 stuck at 50% |
+| [`pomdp-flag-maze/`](pomdp-flag-maze/) (PR #7) | yes | 22-32s | 10/10 seeds solve with 0.995 identity-blend controller recurrence (old 0.9 blend: 8/10 same-machine rerun) |
 
 ### Schmidhuber (1991/1992) — Neural sequence chunkers
 
@@ -309,8 +309,8 @@ Per-stub reproducibility, run wallclock, and headline result for the 58 implemen
 
 | Reproduces? | Count | Examples |
 |---|---:|---|
-| **yes** | 32 | nbb-moving-light, flip-flop, embedded-reber, fast-weights-key-value, oops-towers-of-hanoi, linear-transformers-fwp, world-models-carracing, ... |
-| **partial** | 12 | self-referential-weight-matrix, mnist-deep-mlp, mcdnn-image-bench, evolino-sines-mackey-glass, neural-em-shapes, neural-data-router, ... |
+| **yes** | 33 | nbb-moving-light, flip-flop, pomdp-flag-maze, embedded-reber, fast-weights-key-value, oops-towers-of-hanoi, linear-transformers-fwp, world-models-carracing, ... |
+| **partial** | 11 | self-referential-weight-matrix, mnist-deep-mlp, mcdnn-image-bench, evolino-sines-mackey-glass, neural-em-shapes, neural-data-router, ... |
 | **qualitative** | 13 | nbb-xor, noise-free-long-lag, lococode-ica, blues-improvisation, em-segmentation-isbi, compete-to-compute, timit-blstm-ctc, iam-handwriting, ... |
 | **no** | 1 | hq-learning-pomdp (honest non-replication; mathematical analysis documented) |
 

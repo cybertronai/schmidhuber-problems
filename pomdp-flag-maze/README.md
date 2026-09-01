@@ -48,10 +48,11 @@ Two interacting fully-recurrent vanilla tanh RNNs (Schmidhuber 1991, fig. 2):
 | `M` (world model) | `obs (5) || one-hot action (4) || indicator (1)` | 40 | `next_obs (5) || reward (1)` |
 | `C` (controller)  | `obs (5)`                                          | 24 | `action_logits (4) -> softmax` |
 
-Both have hand-coded BPTT. `W_h` is initialized at `0.9 I + 0.1 * random`
-(Le et al. 2015) so the recurrent state has a built-in tendency to persist,
-which is necessary for `h_C` to latch the indicator across the 5-step
-corridor without LSTM gates.
+Both have hand-coded BPTT. The world model uses
+`W_h = 0.9 I + 0.1 * random`; the controller uses the longer-memory
+`W_h = 0.995 I + 0.005 * random` (Le et al. 2015). The latter keeps the
+indicator signal alive across the corridor without LSTM gates and removes
+the fixed-flag failure mode seen with the previous `0.9` blend.
 
 ### Algorithm
 
@@ -74,7 +75,7 @@ The Schmidhuber 1991 controller-through-model recipe, with Ha & Schmidhuber
    cycles is kept (occasionally a refresh destabilizes `C`; the snapshot
    prevents losing a good policy).
 
-Two implementation knobs that turned out to matter:
+Three implementation knobs that turned out to matter:
 
 - **Straight-through estimator on `M`'s action input.** The vanilla
   controller-through-model setup feeds soft `a_probs` to `M`. Once `C`
@@ -92,6 +93,11 @@ Two implementation knobs that turned out to matter:
   Passing the persistent indicator as an explicit side-channel input to
   `M` only (not to `C`) keeps `M`'s reward predictions correct while
   preserving the POMDP burden on `C`.
+- **Near-identity recurrence for `C`.** The previous
+  `0.9 I + 0.1 * random` initialization still lost the one-step indicator
+  on some seeds, producing a fixed choice at the T-junction. Increasing only
+  the controller blend to `0.995 I + 0.005 * random` eliminates that collapse
+  across seeds 0--9. The world-model initialization remains `0.9`.
 
 ## Files
 
@@ -127,6 +133,7 @@ python3 make_pomdp_flag_maze_gif.py    --seed 0
 CLI flags worth knowing: `--C-iters N` (controller iters per cycle,
 default 800), `--T-unroll T` (BPTT horizon, default 10), `--final-eps N`
 (eval episodes, default 200), `--no-baseline` (skip the FF baseline run),
+`--C-identity-recurrence X` (controller identity blend, default 0.995),
 `--save-json path` (dump summary).
 
 ## Results
@@ -137,25 +144,30 @@ Headline run on **seed 0**, defaults:
 |---|---|
 | Recurrent `C` success rate (200 episodes, greedy) | **100% (200/200)** |
 | Recurrent `C` mean steps to flag | 6.0 |
-| Feed-forward `C` (same arch, `W_h = 0`) success | 0.0% |
+| Feed-forward `C` (same arch, `W_h = 0`) success | 50.0% |
 | Random walk success (200 eps, t_max = 20) | 3.5% |
-| Held-out `M` MSE (weighted, 100 eps) | 3.8e-3 |
-| Wallclock (incl. FF baseline) | 31.7 s |
+| Held-out `M` MSE (weighted, 100 eps) | 3.97e-3 |
+| Wallclock (incl. FF baseline) | 56.6 s on the validation host |
 
 **Multi-seed sweep (10 seeds, recurrent C, no FF baseline):**
 
-| Result | Seeds | Count |
-|---|---|---|
-| 100% solve (latched indicator) | 0, 1, 2, 6, 8, 9 | **6 / 10** |
-| 50% solve (T-junction reached, fixed flag choice) | 3, 4, 5, 7 | 4 / 10 |
-| 0% solve (failed entirely) | -- | 0 / 10 |
+| Controller recurrence init | 100%-solve seeds | 50%-solve seeds | Mean final success | Mean steps |
+|---|---|---|---:|---:|
+| **0.995 I + 0.005 random (default)** | **0--9 (10/10)** | **none** | **100%** | **6.55** |
+| 0.9 I + 0.1 random (same-machine rerun) | 0, 1, 2, 4, 6, 7, 8, 9 (8/10) | 3, 5 (2/10) | 90% | 7.65 |
+| 0.9 I + 0.1 random (original reported sweep) | 0, 1, 2, 6, 8, 9 (6/10) | 3, 4, 5, 7 (4/10) | 80% | -- |
 
-The "50%" failures are the feed-forward equivalent: `C` learned to navigate
-to the T-junction but did not learn to use the indicator latch, so it
-always picks (say) S and gets the half of episodes where indicator=-1. The
-"0%" failure mode (where the FF baseline often lands) is a "stay-put"
-policy that bumps the start wall forever; the best-`C` snapshot prevents
-recurrent `C` from regressing into this.
+The comparison rerun used Python 3.14.0, NumPy 2.3.5 and one BLAS thread per
+process. The old blend's difference from the original M-series result shows
+that the boundary seeds are numerically sensitive, but the new default solves
+all ten under the same environment. A "50%" policy reaches the T-junction but
+always picks the same flag; the 0.995 blend eliminates that failure. The
+"0%" stay-put failure does not occur in either sweep.
+
+As an out-of-sample check after selecting the new default, 18/20 additional
+seeds (10--29) solved fully and two reached 50%, for 28/30 full solves overall.
+This supports the improvement while showing that rare fixed-flag basins still
+exist outside the catalog's standard ten-seed sweep.
 
 **Hyperparameters** (all defaults; see `RunConfig` in `pomdp_flag_maze.py`):
 
@@ -168,7 +180,8 @@ refresh_action_noise = 0.3
 C_hidden = 24,  C_iters = 800,  C_T_unroll = 10,  C_lr = 2e-3
 C_batch_size = 12,  gamma = 0.95
 ent_coef_start = 0.20,  ent_coef_end = 0.05,  ent_anneal_iters = 1500
-identity_recurrence = 0.9   (W_h init = 0.9 I + 0.1 random)
+M_identity_recurrence = 0.9
+C_identity_recurrence = 0.995
 straight_through = True     (one-hot action sample for M's forward,
                              gradient as if soft probs were the input)
 optimizer = Adam (β1=0.9, β2=0.999), global-norm gradient clip = 5.0
@@ -239,9 +252,11 @@ The numerical comparison: recurrent `C` (100% / 6 steps), feed-forward `C`
    "feed soft `a_probs` to `M`" channel saturates as `C` becomes peaked,
    the off-action gradients vanish, and `C` cannot escape the
    "always pick the same flag" basin (50% ceiling).
-4. **Identity-blend recurrence init.** `W_h = 0.9 I + 0.1 * random`
-   (Le et al. 2015). Vanilla random init gives `h_C` poor memory; this
-   init makes the latch trivially preserved across the corridor.
+4. **Identity-blend recurrence init.** The controller uses
+   `W_h = 0.995 I + 0.005 * random` (Le et al. 2015); the world model keeps
+   the earlier 0.9 blend. The previous 0.9 controller initialization was
+   numerically brittle and left 2/10 seeds at the 50% fixed-flag ceiling in
+   a same-machine rerun (4/10 in the original reported sweep).
 5. **Dense per-step reward.** `+2` on the correct flag, `-2` on the
    wrong one, `-0.05` step penalty otherwise. The 1991 paper used
    "predicted pain" only at failure; we use the dense per-step variant
@@ -255,12 +270,10 @@ The numerical comparison: recurrent `C` (100% / 6 steps), feed-forward `C`
 
 ## Open questions / next experiments
 
-- **Robustness across seeds.** 6/10 perfect, 4/10 stuck at the 50% ceiling.
-  The non-solving seeds plateau in cycle 1 with a fixed-flag policy and
-  refresh+continued training does not always escape the basin.
-  Candidate fixes worth trying: (i) larger entropy bonus annealing more
-  slowly, (ii) population-based outer loop (best of K random C inits),
-  (iii) explicit indicator-augmented advantage shaping.
+- **Tail robustness.** The near-identity controller solves seeds 0--9 and
+  18/20 held-out seeds 10--29. Characterize the remaining fixed-flag tail
+  with a larger preregistered sweep, and test whether the 0.995 blend
+  transfers to longer corridors.
 - **Hand-rolled LSTM `M`.** Vanilla tanh RNN forced us to push the
   indicator into `M` as a side input. Replacing `M` with a small LSTM
   (or even a plain `0.95 I` orthogonal init) might let `M` latch on its

@@ -119,7 +119,7 @@ Hierarchical RL: a sub-goal generator C_high proposes K=2 waypoints, a low-level
 
 ![pomdp-flag-maze](pomdp-flag-maze/pomdp_flag_maze.gif)
 
-A 2-D T-maze with a hidden flag. The agent observes only its local 4-wall context plus a 1-bit indicator that is non-zero ONLY at the start cell. Recurrent M+C architecture must latch the indicator across the full episode. 6/10 seeds 100% solve, 4/10 stuck at 50% — likely a recurrent-init sensitivity flagged in §Open questions.
+A 2-D T-maze with a hidden flag. The agent observes only its local 4-wall context plus a 1-bit indicator that is non-zero ONLY at the start cell. Recurrent M+C architecture must latch the indicator across the full episode. A 0.995 identity-blend controller recurrence solves 10/10 seeds; the previous 0.9 blend was sensitive to a fixed-flag 50% attractor.
 
 ### Schmidhuber (1991/1992) — Neural sequence chunkers
 

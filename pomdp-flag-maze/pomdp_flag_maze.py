@@ -853,6 +853,9 @@ class RunConfig:
     refresh_action_noise: float = 0.3
     # phase 2 (C training)
     C_hidden: int = 24
+    # Near-identity initialization preserves the one-step flag indicator
+    # across the corridor more reliably than the previous 0.9 blend.
+    C_identity_recurrence: float = 0.995
     C_iters: int = 800          # per cycle
     C_T_unroll: int = 10
     C_lr: float = 2e-3
@@ -900,7 +903,8 @@ def run(cfg: RunConfig, verbose: bool = True):
 
     # ---- iterative cycles: train C through M, then refresh M -------------
     C = TanhRNN(in_dim=env.OBS_DIM, hid_dim=cfg.C_hidden, out_dim=env.ACT_DIM,
-                rng=rng_init, scale=0.5, identity_recurrence=0.9)
+                rng=rng_init, scale=0.5,
+                identity_recurrence=cfg.C_identity_recurrence)
     # Track best-checkpoint C across cycles -- iterative refresh occasionally
     # destabilizes a cycle's policy (a refreshed M can land C in a new local
     # optimum that is worse than the previous cycle). We keep the parameters
@@ -1071,6 +1075,8 @@ def main():
     p.add_argument("--M-hidden", type=int, default=defaults.M_hidden)
     p.add_argument("--M-episodes", type=int, default=defaults.M_episodes)
     p.add_argument("--C-hidden", type=int, default=defaults.C_hidden)
+    p.add_argument("--C-identity-recurrence", type=float,
+                   default=defaults.C_identity_recurrence)
     p.add_argument("--C-iters", type=int, default=defaults.C_iters)
     p.add_argument("--T-unroll", type=int, default=defaults.C_T_unroll)
     p.add_argument("--batch", type=int, default=defaults.C_batch_size)
@@ -1088,6 +1094,7 @@ def main():
         M_hidden=args.M_hidden,
         M_episodes=args.M_episodes,
         C_hidden=args.C_hidden,
+        C_identity_recurrence=args.C_identity_recurrence,
         C_iters=args.C_iters,
         C_T_unroll=args.T_unroll,
         C_batch_size=args.batch,
