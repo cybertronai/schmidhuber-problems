@@ -119,20 +119,27 @@ def y_index(p: int) -> int:
     return p
 
 
-def gen_sequence(p: int, rng: np.random.Generator):
+def gen_sequence(p: int, rng: np.random.Generator, key: int | None = None):
     """Return (input_idx, target_idx) of length T = p+1 / p respectively.
 
     The sequence runs:  key, a_1, a_2, ..., a_{p-1}, key
     Inputs are positions 0..T-1. Targets at step t are the symbol at t+1.
     """
-    key = rng.choice([x_index(p), y_index(p)])
+    if key is None:
+        key = int(rng.choice([x_index(p), y_index(p)]))
+    elif key not in (x_index(p), y_index(p)):
+        raise ValueError("key must be the x or y symbol index")
     seq = [key] + list(range(p - 1)) + [key]   # a_1..a_{p-1} = indices 0..p-2
     inputs = np.asarray(seq[:-1], dtype=np.int64)
     targets = np.asarray(seq[1:], dtype=np.int64)
     return inputs, targets
 
 
-def gen_batch_one_hot(p: int, rng: np.random.Generator):
+def gen_batch_one_hot(
+    p: int,
+    rng: np.random.Generator,
+    key: int | None = None,
+):
     """Generate a single sequence in one-hot form.
 
     Returns
@@ -140,7 +147,7 @@ def gen_batch_one_hot(p: int, rng: np.random.Generator):
     X : (T, V) float
     Y : (T,) int   target symbol indices
     """
-    inputs, targets = gen_sequence(p, rng)
+    inputs, targets = gen_sequence(p, rng, key=key)
     V = alphabet_size(p)
     T = inputs.shape[0]
     X = np.zeros((T, V), dtype=np.float64)
@@ -370,6 +377,7 @@ def train(
     eval_batch: int = 64,
     success_threshold: float = 0.95,
     rolling_window: int = 256,
+    balanced_keys: bool = True,
     snapshots: int = 0,
     verbose: bool = True,
 ):
@@ -390,7 +398,14 @@ def train(
     t_start = time.time()
 
     for step in range(1, max_seq + 1):
-        X, Y = gen_batch_one_hot(p, rng)
+        # There are exactly two training sequences.  By default alternate
+        # them so every adjacent pair is balanced instead of letting random
+        # key streaks reinforce the chance-level single-key local minimum.
+        if balanced_keys:
+            key = x_index(p) if step % 2 else y_index(p)
+        else:
+            key = None
+        X, Y = gen_batch_one_hot(p, rng, key=key)
         loss_total, loss_last, grads, probs = model.loss_and_grads(
             X, Y, last_step_weight=last_step_weight)
         gnorm = model.adam_step(grads, lr=lr)
@@ -435,7 +450,8 @@ def train(
                     f"rolling_last {rolling_acc_last:.2f}  gn {gnorm:.2f}"
                 )
 
-            if solved_at is None and rolling_acc_last >= success_threshold:
+            if (solved_at is None and len(rolling) >= rolling_window
+                    and rolling_acc_last >= success_threshold):
                 solved_at = step
 
         if snapshots and (step in _snapshot_steps(snapshots, max_seq) or step == 1):
@@ -460,6 +476,7 @@ def train(
         "last_step_weight": last_step_weight,
         "rolling_window": rolling_window,
         "success_threshold": success_threshold,
+        "key_schedule": "alternating" if balanced_keys else "random",
         "solved_at_seq": solved_at,
         "final_acc_last_step_200": final_eval["acc_last"],
         "final_acc_per_step_200": final_eval["acc_per_step"],
@@ -511,6 +528,8 @@ def main():
     ap.add_argument("--eval-batch", type=int, default=64)
     ap.add_argument("--rolling-window", type=int, default=256)
     ap.add_argument("--success-threshold", type=float, default=0.95)
+    ap.add_argument("--random-key-order", action="store_true",
+                    help="sample x/y keys independently (legacy ablation)")
     ap.add_argument("--snapshots", type=int, default=0,
                     help="if >0, store this many parameter snapshots for viz")
     ap.add_argument("--save-log", type=str, default=None,
@@ -529,6 +548,7 @@ def main():
         eval_batch=args.eval_batch,
         rolling_window=args.rolling_window,
         success_threshold=args.success_threshold,
+        balanced_keys=not args.random_key_order,
         snapshots=args.snapshots,
         verbose=not args.quiet,
     )
