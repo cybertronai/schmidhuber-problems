@@ -37,9 +37,11 @@ forcing the hidden code to be sparse pushes the network to use as few
 hidden units per input as possible, which is the algorithmic definition
 of "few effective parameters". With whitened input, MSE alone has a flat
 minimum on the orthogonal manifold (any orthogonal `W` reconstructs `Z`
-perfectly). The L1 penalty breaks the rotational symmetry by selecting
-the rotation whose codes are sparsest — which on Laplacian sources is
-exactly the demixing direction.
+perfectly). After each gradient update we use the polar/SVD retraction
+`W = U V^T` to remain on that manifold. The L1 penalty can therefore select
+the rotation whose codes are sparsest without shrinking the code scale or
+trading away reconstruction — which on Laplacian sources is exactly the
+demixing direction.
 
 We compare against two baselines:
 
@@ -53,7 +55,7 @@ We compare against two baselines:
 
 | File | Purpose |
 |---|---|
-| `lococode_ica.py` | data generation, LOCOCODE autoencoder, PCA + FastICA baselines, Amari distance, CLI. `python3 lococode_ica.py --seed N [--n-seeds K] [--k 8] [--epochs 200]`. |
+| `lococode_ica.py` | data generation, manifold-constrained LOCOCODE autoencoder, PCA + FastICA baselines, Amari distance, CLI. `python3 lococode_ica.py --seed N [--n-seeds K] [--k 8] [--epochs 200]`. |
 | `visualize_lococode_ica.py` | trains once, saves five static PNGs in `viz/`. |
 | `make_lococode_ica_gif.py` | trains once, saves `lococode_ica.gif` showing training dynamics. |
 | `lococode_ica.gif` | animated training (≤ 600 KB). |
@@ -65,9 +67,9 @@ We compare against two baselines:
 python3 lococode_ica.py --seed 0
 ```
 
-Reproduces the headline numbers in **§Results** in ~0.4 s wallclock on an
-M-series laptop CPU (the network itself trains in ~0.2 s; the rest is
-NumPy import + FastICA baseline).
+Reproduces the headline numbers in **§Results** in ~0.8 s wallclock on the
+validation host (the network itself trains in ~0.52 s; the rest is NumPy
+import + FastICA baseline).
 
 To regenerate visualisations:
 
@@ -82,36 +84,44 @@ To run a 10-seed sweep:
 python3 lococode_ica.py --seed 0 --n-seeds 10
 ```
 
+To reproduce the previous unconstrained-autoencoder ablation:
+
+```bash
+python3 lococode_ica.py --seed 0 --n-seeds 10 --no-orthogonal-retraction
+```
+
 ## Results
 
 Headline (seed 0, default hyperparameters, k = 8, n = 2000, 200 epochs):
 
 | Method | Amari ↓ | mean kurtosis | sparsity (\|h\|<0.2) |
 |---|---:|---:|---:|
-| **LOCOCODE** (L1 + tied AE) | **0.093** | 2.61 | 0.228 |
+| **LOCOCODE** (L1 + tied AE + orthogonal retraction) | **0.014** | 3.19 | 0.249 |
 | PCA (2nd-order) | 0.388 | 1.08 | 0.182 |
 | FastICA (tanh fp) | 0.022 | 3.22 | 0.247 |
 
-LOCOCODE wallclock: 0.19 s (training only). Whitened reconstruction MSE
-at convergence: 0.014 (i.e. `W^T W` is near-orthogonal as required for
-clean reconstruction).
+LOCOCODE wallclock: 0.52 s on the validation host (training only). Whitened
+reconstruction MSE at convergence: `1.1e-30`; the Frobenius error of
+`W W^T` from identity is `3.0e-15`.
 
 10-seed sweep (seeds 0–9, same hyperparameters):
 
 | Method | Amari mean | std | min | max |
 |---|---:|---:|---:|---:|
-| LOCOCODE | 0.117 | 0.021 | 0.083 | 0.147 |
+| **LOCOCODE + retraction** | **0.0172** | 0.0018 | 0.0141 | 0.0198 |
+| LOCOCODE without retraction (same-host ablation) | 0.115 | 0.032 | 0.079 | 0.193 |
 | PCA | 0.423 | 0.034 | 0.371 | 0.478 |
 | FastICA | 0.021 | 0.002 | 0.019 | 0.025 |
 
-**Headline finding** — LOCOCODE on `k = 8` Laplacian-source mixtures
-recovers ICA-like sparse super-Gaussian components: Amari distance is
-**4× lower than PCA** and within a factor of ~5 of FastICA, while the
-hidden-code kurtosis is 2.6 (super-Gaussian, near Laplace) versus PCA's
-1.1 (mostly Gaussian). The headline claim — "LOCOCODE codes resemble ICA
-codes on sparse data" — reproduces qualitatively across all 10 seeds.
-The remaining gap to FastICA is the price of the L1-only flat-minimum
-proxy versus higher-order-moment maximisation; see **§Deviations**.
+**Headline finding** — constraining the whitened tied autoencoder to its
+natural orthogonal manifold reduces mean Amari error from 0.117 in the
+published catalog result (0.115 in the same-host ablation) to 0.0172: an
+85.3% reduction. LOCOCODE now slightly outperforms FastICA's 0.0208 mean,
+with Laplace-like kurtosis (3.19) and no reconstruction tradeoff. A held-out
+audit on seeds 10--29 gives LOCOCODE 0.0179 +/- 0.0028 versus FastICA
+0.0208 +/- 0.0029, confirming the result was not specific to seeds 0--9.
+Across all 30 seeds, LOCOCODE averages 0.01767 versus FastICA's 0.02081
+and wins the paired comparison on 28/30 seeds.
 
 Hyperparameters used:
 
@@ -120,6 +130,7 @@ k = 8, n_samples = 2000, epochs = 200, batch_size = 64,
 lr = 0.05, lambda_act = 0.5, lambda_w = 1e-4
 sources: Laplace(0, 1), standardised; mixing: random orthogonal
 preprocessing: zero-mean, ZCA whitening on observations
+constraint: polar/SVD retraction W = U V^T after every minibatch update
 ```
 
 ## Visualizations
@@ -127,34 +138,28 @@ preprocessing: zero-mean, ZCA whitening on observations
 ### Training curves
 ![training curves](viz/training_curves.png)
 
-Four panels over 200 epochs. **Top-left**: whitened reconstruction MSE
-spikes briefly during the first few epochs (the random orthogonal
-init perturbs slightly under L1 pressure) and then settles near 0.013 —
-not zero, because the L1 penalty trades a small reconstruction loss for
-sparsity. **Top-right**: mean `|H|` decays from 0.76 (init) to 0.69 over
-~30 epochs, then plateaus. The L1 sparsity penalty is doing measurable
-work. **Bottom-left**: mean excess kurtosis of hidden codes climbs from
-near 1.0 to 2.6 by epoch 35 — the codes become decisively
-super-Gaussian, the qualitative signature of an ICA-style decomposition.
-**Bottom-right**: Amari distance to the true mixing falls from 0.35 at
-init to 0.09 by epoch 35 and holds there — the fast Amari drop coincides
-exactly with the kurtosis rise.
+Four panels over 200 epochs. **Top-left**: whitened reconstruction MSE stays
+at floating-point zero because every update is retracted to an orthogonal
+matrix. **Top-right**: mean `|H|` decays from 0.766 to 0.703 as the rotation
+becomes sparser. **Bottom-left**: mean excess kurtosis climbs from 0.92 to
+3.19, essentially the Laplace-source value. **Bottom-right**: Amari distance
+falls from 0.379 to 0.014; separation improves without sacrificing
+reconstruction.
 
 ### Amari + kurtosis comparison
 ![amari comparison](viz/amari_comparison.png)
 
-LOCOCODE sits between PCA and FastICA on both axes. Amari 0.093 vs PCA
-0.388 vs FastICA 0.022. Kurtosis 2.6 vs PCA 1.1 vs FastICA 3.2
-(approximately the true Laplace value of 3). LOCOCODE has not fully
-matched FastICA but it has clearly crossed the threshold from "linear
-2nd-order" (PCA) to "non-Gaussian source separation" (ICA family).
+LOCOCODE slightly leads FastICA on Amari (0.014 vs 0.022) and matches its
+source kurtosis (3.19 vs 3.22); PCA remains far behind at 0.388 Amari and
+1.08 kurtosis. The sparse autoencoder has moved from an approximate
+ICA-like result to clean source separation.
 
 ### Hidden-unit activation histograms
 ![hidden distributions](viz/hidden_distributions.png)
 
 The most-kurtotic unit per method, z-scored, with Laplace (purple
-dashed) and Gaussian (grey dotted) reference curves. **LOCOCODE** unit 1
-(excess `k = 3.75`) and **FastICA** unit 0 (`k = 4.62`) both visibly
+dashed) and Gaussian (grey dotted) reference curves. **LOCOCODE** unit 0
+(excess `k = 4.60`) and **FastICA** unit 3 (`k = 4.62`) both visibly
 peak above the Gaussian and have the heavy-tailed shape characteristic
 of a recovered Laplacian source. The most-kurtotic **PCA** unit (`k =
 2.19`) is closer to Gaussian — PCA finds an axis of maximum variance, not
@@ -166,26 +171,23 @@ mixture than to a pure source.
 
 `|W_recovered @ A_true|` after row-normalisation and a greedy row
 permutation. A perfect demixer (up to permutation and scaling) gives the
-identity matrix. **LOCOCODE** has a clean diagonal but with visible
-~0.3-magnitude off-diagonal cross-talk on a few sources — the L1
-gradient saturates before the rotation is fully resolved. **PCA** is a
-dense mixture in every column — second-order statistics cannot break
-rotational symmetry. **FastICA** is essentially identity; its higher-
-order moments fully resolve the rotation.
+identity matrix. **LOCOCODE** and **FastICA** are both essentially
+permutation matrices. **PCA** is a dense mixture in every column because
+second-order statistics cannot break rotational symmetry.
 
 ### Source recovery
 ![source recovery](viz/source_recovery.png)
 
 Cross-correlation `|corr(S_true, H_recovered)|` after greedy row
 permutation. Same story as the demixer view but expressed through the
-recovered codes themselves: LOCOCODE has high diagonal correlations
-(~0.85–0.95) with bounded off-diagonal cross-talk; PCA mixes sources
-across the entire grid; FastICA is a clean permutation.
+recovered codes themselves: LOCOCODE and FastICA both show near-unit
+diagonal correlations with negligible cross-talk; PCA mixes sources across
+the grid.
 
 ### GIF: training dynamics
 The animation walks through the same training run frame-by-frame: top-
 left shows `|W @ A|` resolving from a dense pattern at epoch 0 to a near
-permutation by epoch 35; top-right shows the chosen hidden unit's
+permutation by roughly epoch 25; top-right shows the chosen hidden unit's
 distribution sharpening from Gaussian-like to heavy-tailed; the bottom
 panel shows the Amari distance dropping while kurtosis rises in lock-
 step.
@@ -217,7 +219,14 @@ step.
    untied weights; with whitened input the tied case is provably
    equivalent at the optimum (any orthogonal `W` is its own inverse) and
    training is much more stable.
-4. **Synthetic `k = 8` Laplacian sources, not the paper's noisy bars
+4. **Orthogonal-manifold retraction.** The paper does not project weights
+   after each update. In this reduced square, whitened, tied-weight problem,
+   however, every reconstruction optimum is orthogonal and the remaining
+   problem is purely rotational. The polar step `W = U V^T` enforces that
+   known constraint and prevents L1 from improving sparsity by shrinking
+   scale. `--no-orthogonal-retraction` reproduces the previous 0.115 Amari
+   same-host ablation.
+5. **Synthetic `k = 8` Laplacian sources, not the paper's noisy bars
    nor natural image patches.** The paper's headline figure on
    image-patch data shows V1-edge-like filters; that's harder to
    benchmark quantitatively. Using synthetic sources with a known
@@ -225,19 +234,16 @@ step.
    standard ICA evaluation metric — and a 10-seed sweep. The
    qualitative story (sparse, super-Gaussian, ICA-like) is the same as
    the paper's; the numbers are reproducible.
-5. **No `numpy`-prohibited dependencies.** Pure numpy + matplotlib +
+6. **No `numpy`-prohibited dependencies.** Pure numpy + matplotlib +
    PIL (only inside `make_lococode_ica_gif.py` to assemble the GIF,
    which the v1 SPEC explicitly allows).
 
 ## Open questions / next experiments
 
-- **Closing the FastICA gap.** LOCOCODE plateaus at Amari ~0.10 while
-  FastICA reaches 0.02. The flat-minimum proxy is L1, which has a non-
-  smooth gradient at zero and saturates once the codes are
-  approximately sparse. Trying the paper's exact activation-Hessian
-  penalty (or its `log cosh` smoothing of L1, which is what FastICA
-  uses internally) would be the principled next step. Hypothesis: it
-  closes the gap to within a factor of 2 of FastICA.
+- **Exact flat-minimum objective.** Orthogonal retraction closes the measured
+  FastICA gap for this L1 surrogate, but the paper's activation-Hessian
+  regularizer remains unimplemented. Comparing that exact objective against
+  L1 on the same constrained manifold would isolate the approximation.
 - **Natural-image-patch experiment.** The paper's headline figure shows
   V1-style edge filters on `8 × 8` natural patches. We did not include
   this because it requires either a small natural-image dataset
@@ -251,10 +257,10 @@ step.
   nice complement to the histograms.
 - **Higher-dim sources.** We test `k = 8`. The original paper reports
   on roughly that scale. How does LOCOCODE scale to `k = 32` or `k =
-  64`? Hypothesis: the L1-saturation gap to FastICA widens, but PCA
-  remains uniformly worst. Quick to check.
+  64`? Test whether the small advantage over FastICA survives as the
+  orthogonal manifold grows. PCA should remain uniformly worst.
 - **v2 hook.** Tied autoencoder + L1 + whitening is an extremely cheap
-  unsupervised feature extractor (~0.2 s for `k = 8, n = 2000`). The
+  unsupervised feature extractor (~0.5 s for `k = 8, n = 2000`). The
   data-movement profile is favourable: one pass through the data per
   epoch, one `k × k` weight matrix. A clean candidate for ByteDMD
   comparison against PCA (1 cov + 1 eigh) and FastICA (whiten + 200-

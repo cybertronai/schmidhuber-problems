@@ -111,7 +111,8 @@ def plot_training_curves(history: dict, out_path: str):
 
 def plot_amari_comparison(metrics: dict, out_path: str):
     methods = ["lococode", "pca", "fastica"]
-    labels = ["LOCOCODE\n(L1 + tied AE)", "PCA\n(2nd order)", "FastICA\n(tanh fp)"]
+    labels = ["LOCOCODE\n(L1 + tied + retract)",
+              "PCA\n(2nd order)", "FastICA\n(tanh fp)"]
     amaris = [metrics[m]["amari"] for m in methods]
     kurts = [metrics[m]["kurtosis_mean"] for m in methods]
     colors = ["#9467bd", "#7f7f7f", "#2ca02c"]

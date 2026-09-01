@@ -171,6 +171,7 @@ def train_lococode(
     lambda_act: float = 0.5,
     lambda_w: float = 1e-4,
     snapshot_every: int = 5,
+    orthogonal_retraction: bool = True,
     A_true: np.ndarray | None = None,
     S_true: np.ndarray | None = None,
 ):
@@ -178,7 +179,8 @@ def train_lococode(
 
     Pipeline:
       1. Whiten X -> Z (cov(Z) = I).
-      2. Train tied autoencoder Z -> H -> Z_hat with MSE + L1 + weight decay.
+      2. Train tied autoencoder Z -> H -> Z_hat with MSE + L1 + weight decay,
+         retracting W to the orthogonal manifold after each update by default.
       3. Recovered demixer in original-X space is W @ K where Z = X @ K.T.
     """
     rng = np.random.default_rng(seed)
@@ -195,6 +197,7 @@ def train_lococode(
         "amari": [],
         "snapshots": [],
         "K_white": K_white,
+        "orthogonal_retraction": orthogonal_retraction,
     }
 
     for epoch in range(epochs + 1):
@@ -246,6 +249,13 @@ def train_lococode(
             grad_W += 2.0 * lambda_w * model.W
 
             model.W -= lr * grad_W
+            if orthogonal_retraction:
+                # Whitened square ICA is a rotation problem. Retract onto the
+                # orthogonal manifold after each update so the sparsity
+                # objective selects the rotation without trading away
+                # reconstruction or shrinking the code scale.
+                u, _, vt = np.linalg.svd(model.W, full_matrices=False)
+                model.W = u @ vt
 
     return model, history
 
@@ -334,12 +344,20 @@ def amari_distance(W_recover: np.ndarray, A_true: np.ndarray) -> float:
 # Top-level run
 # ---------------------------------------------------------------------------
 
-def run_one_seed(seed: int, k: int, n_samples: int, epochs: int):
+def run_one_seed(
+    seed: int,
+    k: int,
+    n_samples: int,
+    epochs: int,
+    orthogonal_retraction: bool = True,
+):
     X, S, A = generate_dataset(seed=seed, k=k, n_samples=n_samples)
 
     t0 = time.time()
     model, hist = train_lococode(
-        X, seed=seed, epochs=epochs, A_true=A, S_true=S,
+        X, seed=seed, epochs=epochs,
+        orthogonal_retraction=orthogonal_retraction,
+        A_true=A, S_true=S,
     )
     t_loco = time.time() - t0
 
@@ -403,11 +421,16 @@ def main():
     p.add_argument("--epochs", type=int, default=200)
     p.add_argument("--n-seeds", type=int, default=1,
                    help="if >1, run a sweep starting at --seed and report mean/std")
+    p.add_argument("--no-orthogonal-retraction", action="store_true",
+                   help="disable the orthogonal-manifold retraction (legacy ablation)")
     p.add_argument("--quiet", action="store_true")
     args = p.parse_args()
 
     if args.n_seeds == 1:
-        out = run_one_seed(args.seed, args.k, args.n_samples, args.epochs)
+        out = run_one_seed(
+            args.seed, args.k, args.n_samples, args.epochs,
+            orthogonal_retraction=not args.no_orthogonal_retraction,
+        )
         m = out["metrics"]
         if not args.quiet:
             print(f"seed={args.seed} k={args.k} n={args.n_samples} epochs={args.epochs}")
@@ -429,7 +452,10 @@ def main():
 
     rows = []
     for s in range(args.seed, args.seed + args.n_seeds):
-        out = run_one_seed(s, args.k, args.n_samples, args.epochs)
+        out = run_one_seed(
+            s, args.k, args.n_samples, args.epochs,
+            orthogonal_retraction=not args.no_orthogonal_retraction,
+        )
         rows.append(out["metrics"])
     if not args.quiet:
         print(f"sweep over {args.n_seeds} seeds (Amari, lower = better)")
