@@ -35,11 +35,11 @@ the other two task families in the paper, are not implemented in v1
 ## What it demonstrates
 
 - **Peephole LSTM emits a spike at exactly the right step**, with test
-  MSE `0.00073` and exact-timing solve rate `0.998` on seed 4.
+  MSE `0.00223` and exact-timing solve rate `0.986` on seed 4.
 - **Vanilla LSTM** (same architecture minus the three peephole vectors)
-  trained under the identical recipe reaches `solve_rate = 0.900`,
-  MSE `0.00240` - it learns the task but at lower precision, with
-  `~10%` of held-out spikes off by at least one step.
+  trained from exactly the same shared weights reaches
+  `solve_rate = 0.799`, MSE `0.00287` - it learns the task but at lower
+  precision, with `~20%` of held-out spikes off by at least one step.
 - The cell-state heatmap (`viz/cell_state.png`) shows one cell
   building up an analog "interval timer" between the two input spikes
   and crossing a threshold exactly at `t_target` - the canonical
@@ -112,8 +112,8 @@ to `1.0`. Output is a scalar linear readout (no sigmoid).
 
 | variant | final test MSE | solve rate (exact) | sequences seen | wallclock |
 |---|---|---|---|---|
-| **peephole LSTM**     | **0.00073** | **0.998** | 96 000 | 32 s |
-| vanilla LSTM (no peep) | 0.00240    | 0.900    | 96 000 | 24 s |
+| **peephole LSTM**     | **0.00223** | **0.986** | 96 000 | 32 s |
+| vanilla LSTM (no peep) | 0.00287    | 0.799    | 96 000 | 24 s |
 
 Eval is on 512 held-out sequences sampled from a separate test RNG;
 "solve rate" requires the predicted-spike step to match the target
@@ -123,24 +123,28 @@ step exactly.
 
 | seed | peep MSE | nope MSE | peep solve | nope solve |
 |---|---|---|---|---|
-| 0 | 0.00347 | 0.00400 | 0.668 | 0.600 |
-| 1 | 0.00046 | 0.00100 | 1.000 | 1.000 |
-| 2 | 0.00137 | 0.00107 | 0.900 | 1.000 |
-| 3 | 0.00209 | 0.00293 | 0.865 | 0.645 |
-| 4 | 0.00073 | 0.00239 | 1.000 | 0.904 |
-| 5 | 0.00204 | 0.00059 | 0.965 | 1.000 |
-| 6 | 0.00257 | 0.00156 | 0.766 | 0.959 |
-| **mean** | **0.00182** | **0.00193** | **0.881** | **0.873** |
+| 0 | 0.00115 | 0.00352 | 0.990 | 0.584 |
+| 1 | 0.00068 | 0.00227 | 1.000 | 0.885 |
+| 2 | 0.00403 | 0.00145 | 0.734 | 0.926 |
+| 3 | 0.00034 | 0.00338 | 1.000 | 0.656 |
+| 4 | 0.00223 | 0.00287 | 0.986 | 0.799 |
+| 5 | 0.00018 | 0.00096 | 1.000 | 0.990 |
+| 6 | 0.00149 | 0.00289 | 0.920 | 0.621 |
+| **mean** | **0.00144** | **0.00248** | **0.947** | **0.780** |
 
-Both variants clear `solve_rate >= 0.6` on every seed within the
-3000-iter budget; both reach `1.000` on at least one seed; the
-peephole variant is `~5%` lower MSE on average. The cleanest
-peephole-vs-vanilla contrast within budget is at seed 4 (used as
-the headline above), where the peephole solve rate is `1.000` and
-vanilla stalls at `0.900`. Three seeds (2, 5, 6) actually favor the
-vanilla variant. The paper claims the vanilla LSTM "fails on all
-three tasks", which we do **not** reproduce at this short-MSD scale
-on a 5-minute laptop budget; see §Open questions and §Deviations.
+Peepholes win the paired exact-timing comparison on 6/7 seeds. Mean timing
+error (`1 - solve_rate`) falls from 0.220 to 0.0527, a **76.0% reduction**;
+mean MSE falls 41.7%. The earlier implementation consumed three peephole RNG
+draws before initializing `Wy`, so the two variants did *not* share output
+weights despite claiming identical initialization. Shared tensors are now
+bit-identical and only `p_i`, `p_f`, and `p_o` differ.
+
+An out-of-sample audit on seeds 7--13 is more mixed: peepholes win 4/7,
+with MSE 0.00177 vs 0.00212 but solve rate 0.859 vs 0.888. Across all 14
+seeds, peepholes win 10/14, reduce mean MSE by 30.2%, and reduce exact timing
+error by 41.7% (solve 0.903 vs 0.834). The paper's claim that vanilla LSTM
+fails entirely still does **not** reproduce at this short-MSD scale; see
+§Open questions and §Deviations.
 
 ### Gradient check
 
@@ -160,10 +164,10 @@ every weight (including all three peephole vectors `p_i`, `p_f`,
 ![training curves](viz/training_curves.png)
 
 Test MSE (log scale) and exact-timing solve rate over the 3000-iter
-training run, seed 4. The peephole LSTM falls another half-decade
-in MSE after iteration ~2200 once it has bound the cell-state
-counter to the output gate via `p_o`; the vanilla LSTM plateaus
-near `2e-3` MSE and `0.9` solve rate.
+training run, seed 4. The peephole LSTM falls sharply after iteration
+~2200 once it binds the cell-state counter to the output gate via `p_o`,
+finishing at 0.00179 MSE and 0.936 solve in this artifact run. The vanilla
+model is less stable and finishes at 0.00370 MSE and 0.703 solve.
 
 ### Sample predictions (held-out test set)
 
@@ -198,10 +202,9 @@ The three peephole vectors after training, one weight per cell.
 `p_i` (`c_{t-1} -> i`) and `p_f` (`c_{t-1} -> f`) gate the
 recurrence of each cell's own counter; `p_o` (`c_t -> o`) is the
 "trigger" - the output gate's coupling to the cell that holds the
-timer. Cells 1, 4, 5, 7 have the largest `|p_o|` and are the ones
-the trained LSTM uses to drive the output spike (consistent with
-the cell-state heatmap above showing cell 0 + a few neighbours
-carrying the count).
+timer. Cells 1, 3, and 7 have the largest `|p_o|` in the regenerated
+seed-4 model and provide strong positive or negative threshold couplings
+around the target step.
 
 ### Gate weight matrices (peephole LSTM)
 

@@ -155,6 +155,10 @@ def init_lstm(input_dim: int, H: int, rng: np.random.RandomState,
     b = np.zeros(4 * H)
     # forget-gate bias = 1.0 (Gers/Schmidhuber/Cummins recipe for long lag)
     b[H:2 * H] = 1.0
+    # Draw every shared parameter before the optional peepholes so peep and
+    # no-peep runs with the same seed start from identical shared weights.
+    Wy = rng.randn(H, 1) * (1.0 / math.sqrt(H))
+    by = np.zeros(1)
     # peephole weights: small random init, as in Gers/Schraudolph/Schmidhuber
     # 2002. Zero-init was tried and is slightly worse on average.
     if use_peep:
@@ -165,8 +169,6 @@ def init_lstm(input_dim: int, H: int, rng: np.random.RandomState,
         p_i = np.zeros(H)
         p_f = np.zeros(H)
         p_o = np.zeros(H)
-    Wy = rng.randn(H, 1) * (1.0 / math.sqrt(H))
-    by = np.zeros(1)
     return LSTMParams(Wx=Wx, Wh=Wh, b=b, p_i=p_i, p_f=p_f, p_o=p_o,
                       Wy=Wy, by=by, use_peep=use_peep)
 
