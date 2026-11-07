@@ -1,0 +1,4 @@
+# Offline paper-scale inputs, generated journals and model payloads stay local.
+artifacts/
+data/
+run/
