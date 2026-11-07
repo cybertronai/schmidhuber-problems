@@ -4,7 +4,7 @@ Per-stub reproducibility, run wallclock, and headline result for the 58 implemen
 
 **Reproduces? legend**: `yes` = matches paper qualitatively or quantitatively; `partial` / `qualitative` = method works, paper number not fully reached (gap documented in stub README); `no` = paper claim does not replicate (gap analysis documented).
 
-**Run wallclock**: time to run the final headline experiment on a laptop M-series CPU. Numpy + matplotlib only, no GPU.
+**Run wallclock**: original baseline rows use a laptop M-series CPU with NumPy + matplotlib. The optional paper-scale MNIST row explicitly reports a single-GPU run.
 
 ## 1980s — Local rules and the Neural Bucket Brigade
 
@@ -222,7 +222,14 @@ Per-stub reproducibility, run wallclock, and headline result for the 58 implemen
 
 | Stub | Reproduces? | Run wallclock | Headline |
 |---|---|---:|---|
-| [`mnist-deep-mlp/`](mnist-deep-mlp/) (PR #13) | partial | 79s | 1.17% test err / 15 epochs; 535k MLP vs paper 12M-weight nets at 800 epochs (0.35%) |
+| [`mnist-deep-mlp/`](mnist-deep-mlp/) | partial | 14,260.73s (~3.96h, one GPU), plus pilot | 51/10,000 test mistakes (0.51%), seed 0, 800 epochs and 12.11M matrix weights; paper: 35/10,000 (0.35%). Original PR #13 laptop result: 117/10,000. |
+
+The MNIST rerun selected only on undeformed training-set validation, then scored
+the test set once. Its Wilson 95% test-set interval is 0.388–0.670%, conditional
+on this selected checkpoint, not seed variability. Cost is approximately 3.96
+single-GPU allocated wall-hours for the sustained invocation, plus its prior
+4,096-update pilot; active GPU-hours were not metered. See the stub's
+[results and reconstruction limits](mnist-deep-mlp/README.md#results).
 
 ### Cireşan, Meier, Schmidhuber (2012) — Multi-column DNN
 
@@ -314,7 +321,7 @@ Per-stub reproducibility, run wallclock, and headline result for the 58 implemen
 | **qualitative** | 13 | nbb-xor, noise-free-long-lag, lococode-ica, blues-improvisation, em-segmentation-isbi, compete-to-compute, timit-blstm-ctc, iam-handwriting, ... |
 | **no** | 1 | hq-learning-pomdp (honest non-replication; mathematical analysis documented) |
 
-**Total: 58 stubs implemented, all in pure numpy + matplotlib, all <5 min/seed on a laptop except `pipe-6-bit-parity` (240s 6-bit budget cap), `evolino-sines-mackey-glass` (140s).**
+**Total: 58 original NumPy + matplotlib stubs. The optional paper-scale MNIST CUDA rerun is recorded separately above; the original laptop baseline remains available.**
 
 ## v2 filter recommendation
 
@@ -347,7 +354,7 @@ For the data-movement / ByteDMD instrumentation, prioritize stubs that:
 Each stub's §Open questions section flags stub-specific follow-ups. Repository-wide follow-ups:
 
 - **Original-simulator reruns** (RL/env-heavy stubs): close the loop on gym CarRacing-v0, VizDoom DoomTakeCover, TORCS, TIMIT, IAM, ISBI. Currently all 8 use numpy mini-environments per the SPEC's RL-stub rule.
-- **Paper-scale reruns** for partial reproductions: full paper-scale `mnist-deep-mlp` (12M weights, 800 epochs); 35-column ensemble for `mcdnn-image-bench`; full ESP for `evolino-sines-mackey-glass`; T ≥ 300 for `timing-counting-spikes`.
+- **Paper-scale reruns** for remaining partial reproductions: 35-column ensemble for `mcdnn-image-bench`; full ESP for `evolino-sines-mackey-glass`; T ≥ 300 for `timing-counting-spikes`. The 800-epoch MNIST arm above remains partial at 0.51% versus 0.35%.
 - **ByteDMD instrumentation** (the actual research goal): prioritize the v2-filter recommendations above.
 
 ---

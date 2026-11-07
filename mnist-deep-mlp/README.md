@@ -18,10 +18,10 @@ that *most of the gap over a vanilla MLP comes from the deformation
 schedule, not the architecture*: the same 0.35% network with no
 augmentation only reaches ~1.6% test error.
 
-This stub captures the algorithm — deep MLP + on-the-fly per-pixel
-deformation + plain SGD — at v1 scale (laptop CPU, <5 min, ~535k weights,
-15 epochs). The §Open questions section sketches the v1.5 path back to
-the paper's number.
+The original v1 entry uses a laptop-scale ~535k-weight network for 15 epochs.
+The optional v1.5 CUDA path now reports an 800-epoch, 12.11M-matrix-weight run
+below. It remains a partial reproduction: 0.51% test error versus the paper's
+0.35%, with the reconstructed choices documented in [PAPER_PROTOCOL.md](PAPER_PROTOCOL.md).
 
 **Dataset**: standard MNIST (60k train, 10k test, 28×28 grayscale).
 
@@ -37,11 +37,17 @@ the paper's number.
 | `viz/augmentation_samples.png` | Original digits next to several augmented copies. |
 | `viz/test_predictions.png` | Sample correct + incorrect test predictions. |
 | `mnist_deep_mlp.gif` | Filter evolution + training-curve animation across 7 epochs (≤1.3 MB). |
+| `paper_online.py`, `paper_cuda.py` | Frozen paper-scale configuration, scalar oracle and FP32 sequential online CUDA updates. |
+| `paper_inputs.py` | Offline provider/IDX byte-and-order identity checks and dataset materialization. |
+| `paper_pilot.py`, `paper_train.py` | Bounded pilot followed by the 800-epoch arm, validation-only selection and one-use final test. |
+| `paper_runstate.py` | Durable run journal and bounded latest/predecessor/best checkpoint retention. |
+| `check_paper_native.py`, `test_paper_*.py`, `test_checkpoint_publication.py` | Scalar/native, warp, restart, retention and final-test admission controls. |
+| `PAPER_PROTOCOL.md`, `SUSTAINED_PROTOCOL.md`, `RERUN.md` | Source choices, execution protocol and offline rerun commands. |
 
 ## Running
 
 ```bash
-# Headline run (default flags). ~80 s on a laptop CPU. Reproduces §Results.
+# Original laptop baseline (default flags), ~80 s. See its Results subsection.
 python3 mnist_deep_mlp.py --seed 0
 
 # Faster smoke test:
@@ -59,9 +65,51 @@ MNIST is downloaded once to `~/.cache/hinton-mnist/` (or
 `~/.cache/schmidhuber-mnist/` if the sibling cache does not exist) from a
 public mirror; subsequent runs read from disk.
 
+### Paper-scale path
+
+The optional v1.5 implementation is separate from the laptop baseline above.
+See [RERUN.md](RERUN.md) for the data preparation and executable pilot/training
+commands, and [PAPER_PROTOCOL.md](PAPER_PROTOCOL.md) for the online-update
+protocol, disclosed paper ambiguities and native parity gates.
+`python3 paper_online.py --smoke` and `python3 test_paper_online.py` run tiny
+offline controls with the standard library only.
+
 ## Results
 
-Headline (seed 0, default flags):
+### v1.5 paper-scale arm
+
+**Partial reproduction:** one seed-0 run made **51 mistakes / 10,000 (0.51%)**,
+versus the paper's **35 / 10,000 (0.35%)**. The Wilson 95% test-set interval is
+**0.388–0.670%**, conditional on this one selected checkpoint; it does not
+estimate variation across seeds or reconstructed protocol choices.
+
+| Metric | Recorded value |
+|---|---|
+| Architecture | 841 → 2500 → 2000 → 1500 → 1000 → 500 → 10, scaled tanh throughout |
+| Parameters | 12,107,500 matrix weights + 7,510 biases = 12,115,010 total |
+| Schedule | 800 epochs, 48,000,000 sequential online updates, no momentum |
+| Selection | Minimum mistakes on all 60,000 original undeformed training images; earliest epoch on ties |
+| Selected checkpoint | 669th epoch (zero-based epoch 668), 49 / 60,000 validation mistakes |
+| Final test | One evaluation of the selected checkpoint; 51 / 10,000 mistakes |
+| Precision/backend | FP32, deterministic algorithms, no TF32; PyTorch 2.14.0+cu130 / CUDA 13.0 |
+| Sustained wall time | 14,260.73 seconds, approximately 3.96 hours |
+| Cost accounting | One-GPU allocated wall-time proxy: ~3.96 GPU-hours sustained, plus the prior 4,096-update pilot; active GPU-hours were not metered |
+
+The sustained invocation continued the actual 4,096-update pilot prefix and
+added 47,995,904 updates. The preparatory pilot phase took 116.37 seconds;
+its counted updates were not repeated or discarded. No test result was used
+to choose a checkpoint, seed or protocol.
+
+The selected 29×29 input follows the GPU appendix and rounded parameter count;
+the paper's main text instead describes 28×28 inputs. The objective/targets,
+exact decay factor, shuffle and deformation sampling/boundaries also require
+reconstruction. These limits and the single seed leave the result **partial**;
+see [PAPER_PROTOCOL.md](PAPER_PROTOCOL.md). The umbrella issue #18 covers other
+stubs as well and remains open.
+
+### Original laptop baseline
+
+Recorded seed-0 result from PR #13 (original default flags):
 
 | Metric | Value |
 |---|---|
@@ -101,7 +149,7 @@ paper's claim that augmentation does most of the work. Determinism is
 verified: `--seed 0 --epochs 3 --hidden 256 128` reproduces test error
 2.99% bit-for-bit across two runs on the same machine.
 
-**Reproduces:** *Direction yes, magnitude no.* The paper hits 0.35% with
+**Original baseline comparison:** *Direction yes, magnitude no.* The paper hits 0.35% with
 a much bigger network and ~50× more compute; we hit 1.17% with a
 laptop-friendly proxy in ~80 s. The architectural recipe (deep tanh MLP
 + per-epoch affine + elastic augmentation + plain SGD) reproduces the
@@ -146,6 +194,9 @@ window test error drops from ~95% (pre-training) to ~2%.
 
 ## Deviations from the original
 
+The numbered deviations below describe the original laptop baseline. The v1.5
+arm's remaining source ambiguities are listed in [PAPER_PROTOCOL.md](PAPER_PROTOCOL.md).
+
 1. **Network size.** Paper: 5 hidden layers, ~12M weights (e.g.
    784–2500–2000–1500–1000–500–10). Here: 2 hidden layers,
    784–512–256–10, ~535k weights. The paper itself reports a smaller
@@ -181,13 +232,10 @@ window test error drops from ~95% (pre-training) to ~2%.
 
 ## Open questions / next experiments
 
-- **Path to 0.35% (v1.5).** Three orthogonal axes are still on the
-  table: (a) bigger network — `--hidden 2500 2000 1500 1000 500`
-  reaches the paper's exact arch but needs ~50–100× more compute than
-  v1 budgets allow; (b) longer schedule — 200+ epochs with cosine or
-  paper-style annealing; (c) augmentation curriculum — increase α/σ
-  late in training. The paper's ablation suggests (c) gives the biggest
-  marginal gain after (a) is in place.
+- **Remaining paper-scale gap.** The seed-0 800-epoch arm reaches 0.51%, not
+  0.35%. It tests the larger network and longer schedule, but does not isolate
+  the effects of reconstructed targets/objective, deformation boundaries or
+  seed variability. No additional arm was chosen from this test outcome.
 - **No-augmentation baseline.** A clean ablation table (with vs without
   augmentation, fixed seed, fixed epochs) would directly quantify the
   paper's claim that augmentation does most of the work. The current
@@ -209,10 +257,11 @@ window test error drops from ~95% (pre-training) to ~2%.
   exactly with parameter count and minibatch size, which makes this a
   good calibration target for the metric before applying it to
   the LSTM and evolutionary stubs.
-- **Citation gap.** None obvious for this paper — Neural Computation
-  22(12) is fully retrievable and the experimental section is
-  unambiguous about hyperparameters. The 35-net McDNN follow-up
-  (CVPR 2012) is the partner paper for the multi-column extension.
+- **Source ambiguities.** The main-text/appendix input sizes differ, and the
+  output targets, objective formula and some sampling conventions are not
+  fully specified. [PAPER_PROTOCOL.md](PAPER_PROTOCOL.md) distinguishes those
+  reconstructions from stated parameters. The 35-net McDNN follow-up is the
+  partner paper for the multi-column extension.
 
 ## Sources
 
